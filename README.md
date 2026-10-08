@@ -1,28 +1,42 @@
-# SEO Decision Engine
+# محرك قرارات السيو (SEO Decision Engine)
 
-Free, client-side tool that turns a Google Search Console CSV into prioritized SEO opportunities. HTML + CSS + vanilla JS. No backend, no APIs, no tracking. Data is processed locally in the browser.
+أداة مجانية بالكامل تحوّل ملف تصدير Google Search Console (‏xlsx / xls / csv) إلى فرص سيو مرتبة بالأولوية، مع درجة تقديرية 0–100 وخطة عمل وتصدير CSV.
+**بياناتك تُعالج محليًا داخل المتصفح ولا يتم رفعها إلى أي خادم.**
 
-## Run locally
-Open `index.html` in a browser, or run `python3 -m http.server` in this folder.
+## التشغيل محليًا
+افتح `index.html` في المتصفح مباشرة (الملفات الثلاثة `index.html` و`style.css` و`app.js` في نفس المجلد). (قراءة Excel تحتاج اتصالًا بالإنترنت لتحميل مكتبة SheetJS من cdnjs؛ ملفات CSV تعمل بدونها.)
 
-## Deploy free on GitHub Pages
-1. Create a GitHub repository and upload `index.html`, `styles.css`, `app.js`, `README.md` to the root.
-2. Go to **Settings → Pages**, set Source to **Deploy from a branch**, branch `main`, folder `/ (root)`, and save.
-3. Your site appears at `https://<username>.github.io/<repo>/` after about a minute.
+## النشر المجاني على GitHub Pages
+1. أنشئ مستودعًا جديدًا على GitHub (Public) وارفع `index.html` و`style.css` و`app.js` و`README.md`.
+2. من **Settings ← Pages**: اختر Branch = `main` والمجلد `/ (root)` ثم Save.
+3. بعد دقائق يظهر الرابط: `https://USERNAME.github.io/REPO/`.
 
-## Deploy free on Cloudflare Pages
-1. Push the files to a Git repository.
-2. In Cloudflare: **Workers & Pages → Create → Pages → Connect to Git**.
-3. Framework preset: **None**. Build command: leave empty. Output directory: `/`.
-4. Deploy. (Or choose **Direct Upload** and drop the folder.)
+## النشر المجاني على Cloudflare Pages
+1. ادخل **Workers & Pages ← Create ← Pages**.
+2. اختر **Upload assets** (أو اربط مستودع GitHub) وارفع المجلد.
+3. بدون Build command وبدون إعدادات إضافية؛ ستحصل على رابط `*.pages.dev`.
 
-## Input
-CSV with `Query` and/or `Page`, plus `Clicks`, `Impressions`, `Position` (CTR optional, recalculated from clicks/impressions). Header names are matched ignoring case and spacing; comma, semicolon and tab delimiters are supported. A standard Query-only or Page-only export works, but query×page data unlocks cannibalization and internal-link detection.
+## كيف تُحسب الدرجة؟ (Heuristic وليست مقياس Google)
+| العنصر | الوزن |
+|---|---|
+| مرات الظهور (مقياس لوغاريتمي) | 25 |
+| المكسب المحتمل في النقرات | 30 |
+| موقع الترتيب (الأعلى قيمة للمراكز 4–10 ثم 11–20) | 20 |
+| فجوة CTR مقابل معدل تقريبي للمركز | 15 |
+| النقرات + علاقة الصفحة بالاستعلام | 10 |
 
-## Methodology (heuristics, not Google data)
-- **SEO Opportunity Score (0–100)** is a proprietary heuristic: impressions (25), estimated click gain (30), position (18), CTR gap (10), clicks (7), page/query relationship (10). Priority: High ≥ 70, Medium ≥ 45.
-- Estimated gain uses a generic CTR-by-position curve, not your site's data. It is an estimate, not a forecast or a ranking promise.
-- Rules: Quick Win (pos 4–15), CTR (pos ≤ 10 with CTR < 70% of curve), Content (pos 15–40), Internal Link (page with 3+ queries at pos 5–20), Cannibalization (2+ URLs sharing a query), Low-Value (many impressions, <1% CTR).
-- Minimum impressions threshold adapts to the dataset (40th percentile, at least 10).
+الأولوية: عالية ≥ 60، متوسطة ≥ 35، وإلا منخفضة.
 
-Not affiliated with Google.
+## قواعد التصنيف
+- **فرص CTR**: مركز ≤ 10 وCTR أقل من 70% من المعدل التقريبي المتوقع.
+- **مكاسب سريعة**: مركز بين 4 و20 بظهور كافٍ.
+- **فرص محتوى**: مركز أبعد من 20 بظهور كافٍ.
+- **روابط داخلية**: صفحة تظهر لـ 3 استعلامات فأكثر بمتوسط مركز 5–20.
+- **Cannibalization**: نفس الاستعلام تظهر له صفحتان فأكثر بحصة ظهور ≥ 10% لكل منهما.
+- **صفحات ضعيفة**: ظهور كافٍ مع نقرات شبه معدومة ومتوسط مركز أبعد من 12.
+
+«الكافي» = أعلى من وسيط مرات الظهور في الملف (وبحد أدنى 20). جداول CTR المرجعية تقريبية وقابلة للتعديل داخل الكود (`EX` في `index.html`).
+
+## تنبيهات
+- أرقام «المكسب المحتمل» تقديرات نظرية متحفظة، وليست وعدًا بزيادة الترتيب أو الزيارات.
+- للحصول على علاقة (استعلام ↔ صفحة) صدّر التقرير بعرض الاستعلامات والصفحات معًا؛ إن وُجد عمود واحد فقط ستقل أنواع الفرص المتاحة.

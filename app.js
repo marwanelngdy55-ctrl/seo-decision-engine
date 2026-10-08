@@ -1,213 +1,122 @@
-'use strict';
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=n=>Math.round(n).toLocaleString('en-US');
-const pct=n=>(n*100).toFixed(2)+'%';
+const $=s=>document.querySelector(s),N=x=>Math.round(x).toLocaleString('en-US'),P=x=>(x*100).toFixed(1)+'%',D1=x=>(+x).toFixed(1);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const T={quick:['مكاسب سريعة','#2563eb'],content:['فرص محتوى','#7c3aed'],ctr:['فرص تحسين CTR','#b45309'],link:['فرص روابط داخلية','#0d9488'],cannibal:['تكرار المنافسة (Cannibalization)','#dc2626'],low:['صفحات ضعيفة الأداء','#64748b']};
+const PR={high:'عالية',med:'متوسطة',low:'منخفضة'};
+const PW={ctr:'الصفحة ظاهرة فعلًا في الصفحة الأولى، فتحسين العنوان والوصف لا يتطلب تغيير الترتيب.',quick:'الكلمات قريبة من الصفحة الأولى أو أعلاها، وتحسينات المحتوى الموجّهة غالبًا أقل تكلفة من إنشاء صفحات جديدة.',content:'هناك طلب بحث ظاهر لكن الموقع ضعيف في النتائج، مما يشير لفجوة في تغطية النية.',link:'صفحات تظهر لعدة استعلامات بمتوسط ترتيب متوسط وقد تستفيد من دعم داخلي.',cannibal:'تعدد الصفحات لنفس الاستعلام يشتت الإشارات ويصعّب على Google اختيار الصفحة الأنسب.',low:'ظهور بلا نقرات تقريبًا: إما أن المحتوى لا يطابق النية أو أن الصفحة لا تستحق الاستثمار.'};
+const PA={ctr:'اختبر عناوين ووصفًا أكثر توافقًا مع نية البحث وراقب CTR 2–4 أسابيع.',quick:'حدّث المحتوى وعمّقه، حسّن H1، وأضف روابط داخلية بنص مرتبط بالكلمة.',content:'راجع أعلى النتائج للكلمة وأنشئ أو وسّع المحتوى ليغطي النية بالكامل.',link:'أضف روابط داخلية من صفحات قوية وذات صلة بنص وصفي.',cannibal:'حدد صفحة رئيسية لكل استعلام ثم ادمج أو فرّق نية بقية الصفحات.',low:'قيّم الصفحة: حسّنها، أو ادمجها مع صفحة أقوى، أو فكّر في إزالتها بحذر.'};
+let ITEMS=[],VIEW=[],pageNo=1,TOT={},SZ=20,fname='';
 
-/* Generic CTR-by-position curve (heuristic, not site specific) */
-const EXP=[0,.28,.15,.10,.07,.055,.043,.035,.029,.024,.02];
-function expCtr(p){
-  if(p<=1)return EXP[1];
-  if(p<=10){const a=Math.floor(p);return EXP[a]+(EXP[Math.min(a+1,10)]-EXP[a])*(p-a)}
-  if(p<=20)return .02-(p-10)*.0012;
-  if(p<=50)return Math.max(.003,.008-(p-20)*.00015);
-  return .002;
-}
-const TYPES={
-  quick:{label:'Quick Win',why:'Pages ranking just off the top spots already have relevance. Small improvements can move them into higher-CTR positions.',act:'Refresh the content, strengthen title/H1 alignment with intent, and add internal links to these pages.'},
-  content:{label:'Content Opportunity',why:'Queries with real demand where you rank beyond page 2 usually need deeper or better-matched content.',act:'Review the SERP, expand coverage of subtopics and intent, or create a dedicated page.'},
-  ctr:{label:'CTR Opportunity',why:'These rank well but earn fewer clicks than a generic curve suggests, which may point to weak snippets.',act:'Test clearer titles and meta descriptions, check rich-result eligibility and compare with competing snippets.'},
-  link:{label:'Internal Link Opportunity',why:'These pages rank on page 1–2 for several queries, so topical relevance exists but authority signals may be thin.',act:'Add contextual internal links from relevant, stronger pages using descriptive anchor text.'},
-  cannibal:{label:'Cannibalization',why:'Several of your URLs get impressions for the same query, which can split signals and clicks.',act:'Decide on a primary URL; consolidate, differentiate intent, or adjust internal links and canonicals.'},
-  low:{label:'Low-Value Page',why:'These pages collect impressions but almost no clicks, so they may add little value in search.',act:'Check intent match and quality; improve, merge, redirect or noindex only after review.'}
-};
+/* ---------- قراءة الملفات ---------- */
+function parseCSV(t){t=t.replace(/^\uFEFF/,'');const f=t.split('\n')[0],d=[',',';','\t'].map(x=>[x,f.split(x).length]).sort((a,b)=>b[1]-a[1])[0][0];
+ const rows=[];let r=[],c='',q=false;
+ for(let i=0;i<t.length;i++){const ch=t[i];
+  if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}
+  else if(ch=='"')q=true;else if(ch==d){r.push(c);c=''}
+  else if(ch=='\n'){r.push(c.replace(/\r$/,''));rows.push(r);r=[];c=''}else c+=ch}
+ if(c||r.length){r.push(c.replace(/\r$/,''));rows.push(r)}
+ return rows.filter(r=>r.some(x=>String(x).trim()!==''))}
+function toNum(v){if(typeof v=='number')return v;let s=String(v).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g,'.').replace(/[٬\s%]/g,'');
+ s=/^-?\d+,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');return parseFloat(s)}
+const RX=[['ctr',/ctr|نسبةالنقر|معدلالنقر/],['clicks',/click|^النقرات$|^نقرات$|^عددالنقرات$/],['impr',/impression|ظهور|انطباع/],['pos',/position|موضع|ترتيب|المركز/],['page',/page|url|landing|صفح|رابط/],['query',/quer|keyword|استعلام|كلمة|عبارة/]];
+function detect(h){const m={};h.forEach((x,i)=>{const n=String(x).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g,'');for(const[k,r]of RX)if(!(k in m)&&r.test(n)){m[k]=i;break}});return m}
+function toRows(sheets){let best,bs=-1;
+ for(const tb of sheets){const m=detect(tb[0]||[]);const s=['query','page','impr','pos','clicks'].filter(k=>k in m).length+(('query'in m&&'page'in m)?3:0);if(s>bs){bs=s;best={tb,m}}}
+ const{tb,m}=best;
+ if(!('impr'in m)||!('pos'in m)||!('query'in m||'page'in m))throw new Error('لم أتعرف على الأعمدة المطلوبة. يجب أن يحتوي الملف على: الاستعلام أو الصفحة، مع مرات الظهور ومتوسط الترتيب (Position).');
+ const rows=tb.slice(1).map(r=>({q:'query'in m?String(r[m.query]).trim():'(غير محدد)',p:'page'in m?String(r[m.page]).trim():'',c:'clicks'in m?(toNum(r[m.clicks])||0):0,i:toNum(r[m.impr]),pos:toNum(r[m.pos])})).filter(r=>r.i>0&&isFinite(r.pos));
+ if(!rows.length)throw new Error('لا توجد صفوف صالحة (مرات الظهور والترتيب يجب أن تكون أرقامًا).');
+ return rows}
 
-/* ---------- CSV ---------- */
-function parseCSV(t){
-  t=t.replace(/^\uFEFF/,'');
-  const h=t.slice(0,t.search(/\r?\n|$/));
-  const d=(h.match(/;/g)||[]).length>(h.match(/,/g)||[]).length?';':(!h.includes(',')&&h.includes('\t')?'\t':',');
-  const rows=[];let r=[],f='',q=false;
-  for(let i=0;i<t.length;i++){const c=t[i];
-    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
-    else if(c==='"')q=true;
-    else if(c===d){r.push(f);f=''}
-    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;r.push(f);f='';if(r.length>1||r[0]!=='')rows.push(r);r=[]}
-    else f+=c}
-  if(f!==''||r.length){r.push(f);rows.push(r)}
-  return{rows,comma:d===';'};
-}
-const AL={query:['query','queries','topqueries','searchquery','keyword','keywords'],page:['page','pages','toppages','url','landingpage'],clicks:['clicks'],impressions:['impressions'],position:['position','avgposition','averageposition','avgpos']};
-const num=(s,c)=>{s=String(s||'').replace(/[%\s]/g,'');s=c?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');return parseFloat(s)};
-function toRecords(text){
-  const{rows,comma}=parseCSV(text);
-  if(rows.length<2)throw new Error('The file has no data rows. Export a Performance report from Search Console and try again.');
-  const head=rows[0].map(x=>x.toLowerCase().replace(/[^a-z]/g,''));
-  const col={};for(const k in AL)col[k]=head.findIndex(x=>AL[k].includes(x));
-  const miss=['clicks','impressions','position'].filter(k=>col[k]<0);
-  if(col.query<0&&col.page<0)miss.unshift('query or page');
-  if(miss.length)throw new Error('Missing column(s): '+miss.join(', ')+'. Found: '+rows[0].join(', ')+'.');
-  const out=[];
-  for(let i=1;i<rows.length;i++){const r=rows[i];
-    const c=num(r[col.clicks],comma),im=num(r[col.impressions],comma),p=num(r[col.position],comma);
-    if(!(im>0)||isNaN(p))continue;
-    out.push({q:col.query>=0?(r[col.query]||'').trim():'(all queries)',u:col.page>=0?(r[col.page]||'').trim():'(all pages)',c:isNaN(c)?0:c,i:im,p});
-  }
-  if(!out.length)throw new Error('No valid rows found. Check that Impressions and Position contain numbers.');
-  return out;
-}
+/* ---------- التحليل ---------- */
+const EX=[.28,.15,.11,.08,.065,.05,.04,.032,.027,.023];
+function ectr(p){if(p<=1)return EX[0];if(p>=10)return Math.max(.003,.023*Math.exp(-(p-10)/8));const i=Math.floor(p),f=p-i;return EX[i-1]+(EX[i]-EX[i-1])*f}
+const posS=p=>p<=3?4:p<=10?20:p<=15?16:p<=20?11:p<=30?6:2;
+function analyze(rows){
+ const hasP=rows.some(r=>r.p),hasQ=rows.some(r=>r.q!=='(غير محدد)'),si=rows.map(r=>r.i).sort((a,b)=>a-b),thr=Math.max(20,si[si.length>>1]||0);
+ const pg={},qg={},out=[],can=new Set();
+ rows.forEach(r=>{const a=pg[r.p]||(pg[r.p]={u:r.p,i:0,c:0,w:0,n:0,top:r});a.i+=r.i;a.c+=r.c;a.w+=r.pos*r.i;a.n++;if(r.i>a.top.i)a.top=r;(qg[r.q.toLowerCase()]||(qg[r.q.toLowerCase()]=[])).push(r)});
+ rows.forEach(r=>{if(r.i<thr)return;const ctr=r.c/r.i,ex=ectr(r.pos);let t,g;
+  if(r.pos<=10&&ctr<.7*ex){t='ctr';g=r.i*(ex-ctr)*.5}
+  else if(r.pos>4&&r.pos<=20){t='quick';g=r.i*Math.max(0,ectr(r.pos>10?8:Math.max(1,Math.round(r.pos)-2))-ctr)*.5}
+  else if(r.pos>20){t='content';g=r.i*Math.max(0,ectr(10)-ctr)*.3}else return;
+  out.push({t,q:r.q,u:r.p,pos:r.pos,i:r.i,c:r.c,ctr,gain:g,ex,rel:pg[r.p].n>=3?3:0})});
+ if(hasP)Object.values(pg).forEach(a=>{if(!a.u)return;const w=a.w/a.i,ctr=a.c/a.i,ex=ectr(w),b={q:a.top.q,u:a.u,pos:w,i:a.i,c:a.c,ctr,ex,n:a.n};
+  if(a.n>=3&&w>=5&&w<=20&&a.i>=thr*2)out.push({...b,t:'link',gain:a.i*Math.max(0,ectr(Math.max(1,w-3))-ctr)*.3,rel:3});
+  if(a.i>=thr&&a.c<=Math.max(1,a.i*.003)&&w>12)out.push({...b,t:'low',gain:a.i*Math.max(0,ectr(10)-ctr)*.15,rel:0})});
+ if(hasP&&hasQ)Object.entries(qg).forEach(([k,a])=>{const ps={};a.forEach(r=>{const x=ps[r.p]||(ps[r.p]={u:r.p,i:0,c:0,w:0});x.i+=r.i;x.c+=r.c;x.w+=r.pos*r.i});
+  const L=Object.values(ps),Tt=L.reduce((s,x)=>s+x.i,0),big=L.filter(x=>x.i>=Math.max(5,Tt*.1));if(big.length<2||Tt<thr)return;
+  big.sort((x,y)=>y.c-x.c||y.i-x.i);const c=L.reduce((s,x)=>s+x.c,0),w=L.reduce((s,x)=>s+x.w,0)/Tt,best=Math.min(...big.map(x=>x.w/x.i));
+  can.add(k);out.push({t:'cannibal',q:a[0].q,u:big[0].u,urls:big.map(x=>x.u),pos:w,i:Tt,c,ctr:c/Tt,gain:Tt*Math.max(0,ectr(Math.max(1,best-1))-c/Tt)*.5,ex:ectr(w),rel:5})});
+ out.forEach(o=>{if(o.t!='cannibal'&&can.has(o.q.toLowerCase()))o.rel=Math.min(5,o.rel+2)});
+ const M={i:1,g:1,c:1};out.forEach(o=>{M.i=Math.max(M.i,o.i);M.g=Math.max(M.g,o.gain);M.c=Math.max(M.c,o.c)});
+ out.forEach(o=>{const l=Math.log1p;
+  o.score=Math.round(Math.min(100,l(o.i)/l(M.i)*25+l(o.gain)/l(M.g)*30+posS(o.pos)+(o.pos<=20?Math.max(0,Math.min(1,(o.ex-o.ctr)/o.ex))*15:0)+l(o.c)/l(M.c)*5+o.rel));
+  o.pr=o.score>=60?'high':o.score>=35?'med':'low';
+  const s=`المركز ${D1(o.pos)}`;
+  o.why={ctr:`الكلمة في ${s} وتحصل على ${N(o.i)} ظهور، لكن CTR الحالي ${P(o.ctr)} أقل من المعدل التقريبي المتوقع لهذا المركز (~${P(o.ex)}).`,
+   quick:`الكلمة في ${s} مع ${N(o.i)} ظهور؛ قريبة من الصفحة الأولى أو من أعلاها، وتحسين موجّه قد يحسّن الظهور الفعلي.`,
+   content:`${N(o.i)} ظهور لكن في ${s} (بعد الصفحة الثانية)؛ غالبًا لا تغطي الصفحة النية بشكل كافٍ.`,
+   link:`الصفحة تظهر لـ ${o.n} استعلامات بمتوسط ${s} ومجموع ${N(o.i)} ظهور؛ الدعم الداخلي قد يساعدها.`,
+   cannibal:`الاستعلام تظهر له ${(o.urls||[]).length} صفحات من موقعك بمتوسط ${s}، فتتوزع الإشارات بينها.`,
+   low:`الصفحة حصلت على ${N(o.i)} ظهور و${N(o.c)} نقرة فقط بمتوسط ${s}.`}[o.t];
+  o.act=PA[o.t]+(o.t=='link'?` (نص الرابط المقترح: «${o.q}»)`:'')});
+ out.sort((a,b)=>b.score-a.score);
+ const qs=new Set(rows.map(r=>r.q.toLowerCase())),pgs=new Set(rows.map(r=>r.p).filter(Boolean)),ci=rows.reduce((s,r)=>s+r.i,0),cc=rows.reduce((s,r)=>s+r.c,0);
+ TOT={k:qs.size,p:pgs.size,c:cc,i:ci,ctr:cc/ci,pos:rows.reduce((s,r)=>s+r.pos*r.i,0)/ci,n:out.length,h:out.filter(o=>o.pr=='high').length,thr};
+ return out}
 
-/* ---------- Analysis ---------- */
-function analyze(raw){
-  const m=new Map();
-  for(const r of raw){const k=r.q+'\u0001'+r.u,e=m.get(k);
-    if(e){e.c+=r.c;e.i+=r.i;e.pw+=r.p*r.i}else m.set(k,{q:r.q,u:r.u,c:r.c,i:r.i,pw:r.p*r.i})}
-  const rows=[...m.values()].map(r=>({q:r.q,u:r.u,c:r.c,i:r.i,p:r.pw/r.i,ctr:r.c/r.i}));
-  const T=rows.reduce((a,r)=>(a.c+=r.c,a.i+=r.i,a.pw+=r.p*r.i,a),{c:0,i:0,pw:0});
-  const sorted=rows.map(r=>r.i).sort((a,b)=>a-b);
-  const thr=Math.max(10,sorted[Math.floor(sorted.length*.4)]||10);
-  const opps=[];
-  const add=(type,o)=>{if(o.gain>0.5||type==='low')opps.push({type,...o})};
-  const pages=new Map(),queries=new Map();
-  for(const r of rows){
-    (pages.get(r.u)||pages.set(r.u,[]).get(r.u)).push(r);
-    (queries.get(r.q)||queries.set(r.q,[]).get(r.q)).push(r);
-    if(r.i<thr)continue;
-    const e=expCtr(r.p),g=(t)=>r.i*t-r.c;
-    if(r.p<=10&&r.ctr<.7*e)add('ctr',{q:r.q,u:r.u,p:r.p,i:r.i,c:r.c,ctr:r.ctr,gain:g(e),gap:1-r.ctr/e,rel:0,
-      why:`Ranks at position ${r.p.toFixed(1)} with ${fmt(r.i)} impressions, but CTR is ${pct(r.ctr)} versus roughly ${pct(e)} typical for this position.`,
-      act:'Test a more intent-aligned title and meta description; check the live SERP for competing features.'});
-    else if(r.p>=4&&r.p<=15)add('quick',{q:r.q,u:r.u,p:r.p,i:r.i,c:r.c,ctr:r.ctr,gain:g(expCtr(Math.max(3,Math.ceil(r.p)-3))),gap:Math.max(0,1-r.ctr/e),rel:0,
-      why:`Ranks at position ${r.p.toFixed(1)} with ${fmt(r.i)} impressions. A move up a few places could lift CTR from ${pct(r.ctr)}.`,
-      act:'Improve on-page alignment with intent (title, H1, headings), add depth and internal links.'});
-    else if(r.p>15&&r.p<=40)add('content',{q:r.q,u:r.u,p:r.p,i:r.i,c:r.c,ctr:r.ctr,gain:g(expCtr(Math.max(10,r.p-10))),gap:0,rel:0,
-      why:`Gets ${fmt(r.i)} impressions at position ${r.p.toFixed(1)}, so demand exists but the page is likely too weak or off-intent to compete.`,
-      act:'Audit the SERP for intent, expand or rewrite the content, or build a dedicated page.'});
-  }
-  for(const[u,rs]of pages){
-    const pi=rs.reduce((s,r)=>s+r.i,0),pc=rs.reduce((s,r)=>s+r.c,0);
-    const mid=rs.filter(r=>r.p>=5&&r.p<=20&&r.i>=thr/2);
-    if(mid.length>=3&&pi>=thr){
-      const top=mid.reduce((a,b)=>b.i>a.i?b:a);
-      const gain=.5*mid.reduce((s,r)=>s+r.i*expCtr(Math.max(3,Math.ceil(r.p)-3))-r.c,0);
-      add('link',{q:top.q,u,p:top.p,i:mid.reduce((s,r)=>s+r.i,0),c:mid.reduce((s,r)=>s+r.c,0),ctr:top.ctr,gain,gap:0,rel:.8,
-        why:`This page ranks in positions 5–20 for ${mid.length} queries (top: “${top.q}”), which signals topical relevance that internal links may reinforce.`,
-        act:'Add contextual internal links from relevant, stronger pages using varied descriptive anchors.'});
-    }
-    const pctr=pc/pi,pp=rs.reduce((s,r)=>s+r.p*r.i,0)/pi;
-    if(rs.length>0&&u!=='(all pages)'&&pi>=thr*2&&pctr<.01&&pc<=Math.max(5,pi*.01))
-      add('low',{q:rs.reduce((a,b)=>b.i>a.i?b:a).q,u,p:pp,i:pi,c:pc,ctr:pctr,gain:pi*.005,gap:Math.max(0,1-pctr/expCtr(pp)),rel:.3,
-        why:`The page earned ${fmt(pi)} impressions across ${rs.length} queries but only ${fmt(pc)} clicks (${pct(pctr)}), at average position ${pp.toFixed(1)}.`,
-        act:'Check search intent and content quality. Improve, merge or consolidate; avoid removal before reviewing links and conversions.'});
-  }
-  for(const[q,rs]of queries){
-    const qi=rs.reduce((s,r)=>s+r.i,0);
-    const comp=rs.filter(r=>r.i>=Math.max(qi*.05,thr/2));
-    if(comp.length>=2&&qi>=thr&&q!=='(all queries)'){
-      const best=comp.reduce((a,b)=>a.p<b.p?a:b),qc=rs.reduce((s,r)=>s+r.c,0);
-      const gain=Math.max(qi*expCtr(best.p)-qc,qi*.01);
-      add('cannibal',{q,u:best.u,p:best.p,i:qi,c:qc,ctr:qc/qi,gain,gap:0,rel:1,
-        why:`${comp.length} URLs compete for this query (best at position ${best.p.toFixed(1)}). Others: ${comp.filter(r=>r!==best).slice(0,2).map(r=>r.u.replace(/^https?:\/\/[^/]+/,'')).join(', ')}.`,
-        act:'Pick one primary URL. Consolidate or differentiate the others, and align internal links and canonicals.'});
-    }
-  }
-  const mx=k=>Math.max(1,...opps.map(o=>o[k]));
-  const mI=mx('i'),mG=mx('gain'),mC=mx('c');
-  const L=(v,m)=>Math.log(1+v)/Math.log(1+m);
-  for(const o of opps){
-    const ps=o.p>3&&o.p<=10?18:o.p<=15?14:o.p<=20?10:o.p<=30?5:o.p<=3?4:2;
-    o.score=Math.round(Math.min(100,25*L(o.i,mI)+30*L(Math.max(0,o.gain),mG)+ps+10*o.gap+7*L(o.c,mC)+10*o.rel));
-    o.pri=o.score>=70?'High':o.score>=45?'Medium':'Low';
-  }
-  opps.sort((a,b)=>b.score-a.score||b.gain-a.gain);
-  return{opps,kpi:{kw:queries.size,pg:pages.size,c:T.c,i:T.i,ctr:T.c/T.i,pos:T.pw/T.i,n:opps.length,hi:opps.filter(o=>o.pri==='High').length},thr};
-}
+/* ---------- العرض ---------- */
+function kpis(){const k=[['إجمالي الكلمات',N(TOT.k),'عدد الاستعلامات الفريدة في الملف.'],['إجمالي الصفحات',N(TOT.p),'عدد روابط الصفحات الفريدة.'],['إجمالي النقرات',N(TOT.c),'عدد المرات التي نقر فيها المستخدمون على نتائجك.'],['مرات الظهور',N(TOT.i),'عدد مرات ظهور نتائجك في البحث.'],
+ ['متوسط CTR',P(TOT.ctr),'النقرات ÷ مرات الظهور (موزون).'],['متوسط الترتيب',D1(TOT.pos),'متوسط موقعك مرجّحًا بمرات الظهور؛ الأقل أفضل.'],['إجمالي الفرص',N(TOT.n),'عدد الفرص المكتشفة بقواعد هذا التطبيق.'],['فرص عالية الأولوية',N(TOT.h),'الفرص التي تبلغ درجتها 60 فأكثر.']];
+ $('#kpis').innerHTML=k.map((x,i)=>`<div class="kpi${i==7?' h':''}"><span data-tip="${x[2]}" tabindex="0">${x[0]}</span><strong>${x[1]}</strong></div>`).join('')}
+function apply(){const f={t:$('#fT').value,p:$('#fP').value,a:+$('#fA').value||0,b:+$('#fB').value||999,m:+$('#fM').value||0,u:$('#fU').value.toLowerCase(),q:$('#fQ').value.toLowerCase()},k=$('#fS').value;
+ VIEW=ITEMS.filter(o=>(!f.t||o.t==f.t)&&(!f.p||o.pr==f.p)&&o.pos>=f.a&&o.pos<=f.b&&o.i>=f.m&&(!f.u||(o.u||'').toLowerCase().includes(f.u))&&(!f.q||o.q.toLowerCase().includes(f.q)));
+ VIEW.sort((x,y)=>y[k=='score'?'score':k]-x[k=='score'?'score':k]);pageNo=1;render()}
+function render(){const pgs=Math.max(1,Math.ceil(VIEW.length/SZ));pageNo=Math.min(pageNo,pgs);
+ $('#cnt').textContent=`${N(VIEW.length)} فرصة مطابقة من أصل ${N(ITEMS.length)}`;$('#pg').textContent=`${pageNo} / ${pgs}`;$('#prev').disabled=pageNo<=1;$('#next').disabled=pageNo>=pgs;
+ const s=VIEW.slice((pageNo-1)*SZ,pageNo*SZ);
+ $('#list').innerHTML=s.length?s.map(o=>`<article class="item" style="--c:${T[o.t][1]}"><div class="ih"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div>
+ <div class="badges"><span class="b" style="--c:${T[o.t][1]}">${T[o.t][0]}</span><span class="b pr-${o.pr}">أولوية ${PR[o.pr]}</span><span class="sc" data-tip="درجة فرصة السيو (0–100): مقياس تقديري خاص بهذا التطبيق وليس مقياسًا رسميًا من Google." tabindex="0">${o.score}</span></div></div>
+ <div class="m"><div><span>المركز الحالي</span>${D1(o.pos)}</div><div><span>مرات الظهور</span>${N(o.i)}</div><div><span>CTR</span>${P(o.ctr)}</div><div><span>النقرات</span>${N(o.c)}</div><div><span>مكسب نظري محتمل</span>~${N(o.gain)} نقرة</div></div>
+ <p class="why"><b>لماذا فرصة؟</b> ${o.why}</p><p class="act"><b>الإجراء المقترح:</b> ${esc(o.act)}</p>${o.urls&&o.urls.length>1?`<div class="u">الصفحات المتنافسة: ${o.urls.map(esc).join(' | ')}</div>`:''}</article>`).join(''):'<div class="note">لا توجد فرص مطابقة للفلاتر الحالية. جرّب توسيع المعايير.</div>'}
+function plan(){const g={};ITEMS.forEach(o=>{const x=g[o.t]||(g[o.t]={t:o.t,n:0,gain:0,sc:0,ex:[]});x.n++;x.gain+=o.gain;x.sc+=o.score;if(x.ex.length<3)x.ex.push(o.q)});
+ const L=Object.values(g).sort((a,b)=>(b.sc/b.n*Math.log1p(b.gain))-(a.sc/a.n*Math.log1p(a.gain)));
+ $('#pPlan').innerHTML=L.length?L.map((x,i)=>`<div class="plan" style="--c:${T[x.t][1]}"><div class="n">${i+1}</div><dl><dt>ما الذي نصلحه أولًا</dt><dd><b>${T[x.t][0]}</b> — ${N(x.n)} عنصر، مثل: ${x.ex.map(e=>'«'+esc(e)+'»').join('، ')}</dd>
+ <dt>لماذا</dt><dd>${PW[x.t]}</dd><dt>الفرصة المتوقعة</dt><dd>حتى ~${N(x.gain)} نقرة إضافية خلال فترة البيانات (تقدير نظري متحفظ، غير مضمون)</dd><dt>الإجراء الموصى به</dt><dd>${PA[x.t]}</dd></dl></div>`).join(''):'<div class="note">لم تُكتشف فرص كافية في هذه البيانات.</div>'}
+function show(rows,name){ITEMS=analyze(rows);fname=name;kpis();plan();
+ $('#fT').innerHTML='<option value="">الكل</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
+ $('#meta').textContent=`${name} — ${N(rows.length)} صف تم تحليله`;$('#hero').hidden=true;$('#app').hidden=false;apply();window.scrollTo(0,0)}
 
-/* ---------- UI ---------- */
-let S=null,filtered=[],shown=30;
-const show=(id,v)=>$(id).hidden=!v;
-function load(getRaw,name){
-  show('#intro',0);show('#results',0);show('#error',0);show('#loading',1);
-  setTimeout(()=>{try{
-    S=analyze(getRaw());S.name=name;render();
-  }catch(e){show('#loading',0);show('#intro',1);$('#error').textContent=e.message;show('#error',1)}},30);
-}
-function readFile(f){
-  if(!f)return;
-  if(!/\.csv$/i.test(f.name)&&!/csv|text/.test(f.type)){$('#error').textContent='Please upload a .csv file exported from Google Search Console.';show('#error',1);return}
-  $('#loadMsg').textContent='Reading '+f.name+'…';
-  const rd=new FileReader();
-  rd.onerror=()=>{$('#error').textContent='Could not read the file.';show('#error',1)};
-  rd.onload=()=>load(()=>toRecords(rd.result),f.name);
-  rd.readAsText(f);
-}
-function render(){
-  show('#loading',0);show('#results',1);
-  const k=S.kpi;
-  $('#srcName').textContent=S.name;
-  const K=[['Keywords',fmt(k.kw),'Unique queries in the file.'],['Pages',fmt(k.pg),'Unique URLs in the file.'],['Clicks',fmt(k.c),'Total clicks in the export period.'],['Impressions',fmt(k.i),'Times your pages appeared in results.'],['Avg. CTR',pct(k.ctr),'Total clicks ÷ total impressions.'],['Avg. position',k.pos.toFixed(1),'Impression-weighted average position.'],['Opportunities',fmt(k.n),'Items flagged by this tool’s heuristics.'],['High priority',fmt(k.hi),'Opportunities scoring 70 or more.']];
-  $('#kpis').innerHTML=K.map((x,n)=>`<div class="kpi${n>5?' em':''}"><span class="kl" tabindex="0" data-tip="${esc(x[2])}">${x[0]}</span><b>${x[1]}</b></div>`).join('');
-  const g={};for(const o of S.opps){const e=g[o.type]||(g[o.type]={n:0,hi:0,gain:0,s:0});e.n++;e.gain+=o.gain;e.s+=o.score;if(o.pri==='High')e.hi++}
-  const plan=Object.entries(g).sort((a,b)=>b[1].s-a[1].s);
-  $('#plan').innerHTML=plan.length?plan.map(([t,e],n)=>`<div class="step"><h3>${n+1}. ${TYPES[t].label}: ${e.n} item${e.n>1?'s':''}, ${e.hi} high priority</h3>
-    <p><b>Why:</b> ${TYPES[t].why}</p><p><b>Expected opportunity:</b> roughly ${fmt(e.gain)} additional clicks per export period if fully realised (heuristic estimate, no guarantee).</p>
-    <p style="grid-column:1/-1"><b>Recommended action:</b> ${TYPES[t].act}</p></div>`).join(''):'<div class="empty">No opportunities detected with the current thresholds.</div>';
-  $('#fType').innerHTML='<option value="">All types</option>'+Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
-  filter();
-}
-function filter(){
-  const v=id=>$(id).value.trim(),t=v('#fType'),p=v('#fPri'),pn=parseFloat(v('#fPmin')),px=parseFloat(v('#fPmax')),im=parseFloat(v('#fImp')),q=v('#fQ').toLowerCase(),u=v('#fU').toLowerCase();
-  filtered=S.opps.filter(o=>(!t||o.type===t)&&(!p||o.pri===p)&&(isNaN(pn)||o.p>=pn)&&(isNaN(px)||o.p<=px)&&(isNaN(im)||o.i>=im)&&(!q||o.q.toLowerCase().includes(q))&&(!u||o.u.toLowerCase().includes(u)));
-  shown=30;list();
-}
-function list(){
-  $('#count').textContent=`(${fmt(filtered.length)} of ${fmt(S.opps.length)})`;
-  $('#list').innerHTML=filtered.length?filtered.slice(0,shown).map(o=>`<article class="opp"><div><h3>${esc(o.q)}</h3><div class="url">${esc(o.u)}</div>
-    <div class="tags"><span class="tag">${TYPES[o.type].label}</span><span class="tag ${o.pri}">${o.pri} priority</span></div></div>
-    <div class="score" data-tip="SEO Opportunity Score: a proprietary heuristic from 0–100, not a Google metric." tabindex="0"><b>${o.score}</b><small>score</small><div class="bar2"><i style="width:${o.score}%"></i></div></div>
-    <div class="mets"><span>Position <b>${o.p.toFixed(1)}</b></span><span>Impressions <b>${fmt(o.i)}</b></span><span>CTR <b>${pct(o.ctr)}</b></span><span>Clicks <b>${fmt(o.c)}</b></span><span>Est. gain <b>+${fmt(o.gain)}</b></span></div>
-    <p class="txt"><b>Why:</b> ${esc(o.why)}</p><p class="txt"><b>Action:</b> ${esc(o.act)}</p></article>`).join(''):'<div class="empty">No opportunities match these filters. Try widening them.</div>';
-  show('#moreBtn',filtered.length>shown);
-}
-function exportCSV(){
-  const cell=s=>{s=String(s);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
-  const H=['Query','URL','Position','Impressions','CTR','Clicks','Opportunity Score','Opportunity Type','Priority','Estimated Click Gain','Why','Recommended Action'];
-  const L=filtered.map(o=>[o.q,o.u,o.p.toFixed(2),Math.round(o.i),(o.ctr*100).toFixed(2)+'%',Math.round(o.c),o.score,TYPES[o.type].label,o.pri,Math.round(o.gain),o.why,o.act].map(cell).join(','));
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['\uFEFF'+H.join(',')+'\n'+L.join('\n')],{type:'text/csv'}));
-  a.download='seo-opportunities.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-
-/* ---------- Demo data (synthetic, deterministic) ---------- */
-function demo(){
-  let s=11;const R=()=>(s=s*16807%2147483647)/2147483647;
-  const base='https://www.example.com',topics=[['technical seo','/blog/technical-seo-checklist'],['keyword research','/blog/keyword-research-guide'],['link building','/blog/link-building-strategies'],['meta description','/blog/meta-description-best-practices'],['core web vitals','/blog/core-web-vitals-guide'],['schema markup','/blog/schema-markup-guide'],['seo audit','/blog/seo-audit-template'],['internal linking','/blog/internal-linking-seo'],['local seo','/services/local-seo'],['content strategy','/blog/content-strategy-framework'],['canonical tag','/blog/canonical-tags-explained'],['site speed','/blog/improve-site-speed']];
-  const mods=['','checklist','guide','template','examples','tools','for beginners','best practices','how to','tips','free','audit','mistakes','vs','2026','strategy','tutorial','services','cost','software'];
-  const out=[];
-  topics.forEach(([t,u],ti)=>mods.forEach(m=>{
-    if(R()<.25)return;
-    const q=(m==='how to'?'how to do ':'')+t+(m&&m!=='how to'?' '+m:'');
-    const p=1.2+Math.pow(R(),1.4)*40,im=Math.floor(Math.exp(3+R()*6)*(28/(p+6)));
-    if(im<8)return;
-    const c=Math.round(im*expCtr(p)*(.4+R()*1.1));
-    out.push({q,u:base+u,c,i:im,p});
-    if(R()<.14){const o=topics[(ti+1+Math.floor(R()*5))%topics.length][1],p2=p+2+R()*8,i2=Math.floor(im*(.3+R()*.5));out.push({q,u:base+o,c:Math.round(i2*expCtr(p2)),i:i2,p:p2})}
-  }));
-  return out;
-}
-
-/* ---------- Events ---------- */
-const drop=$('#drop'),fi=$('#file');
-drop.onclick=()=>fi.click();
-drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click()}};
-fi.onchange=()=>{readFile(fi.files[0]);fi.value=''};
-['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('over')}));
-['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('over')}));
-drop.addEventListener('drop',e=>readFile(e.dataTransfer.files[0]));
-$('#demoBtn').onclick=()=>{$('#loadMsg').textContent='Analyzing demo data…';load(demo,'Demo data (synthetic example.com)')};
-$('#resetBtn').onclick=()=>{show('#results',0);show('#intro',1)};
-$('#exportBtn').onclick=exportCSV;
-$('#moreBtn').onclick=()=>{shown+=30;list()};
-let tm;const deb=()=>{clearTimeout(tm);tm=setTimeout(filter,200)};
-['#fType','#fPri'].forEach(i=>$(i).onchange=filter);
-['#fPmin','#fPmax','#fImp','#fQ','#fU'].forEach(i=>$(i).oninput=deb);
+/* ---------- الإدخال ---------- */
+const busy=(b,t)=>{$('#load').hidden=!b;if(t)$('#lt').textContent=t};
+const tick=()=>new Promise(r=>setTimeout(r,40));
+function fail(m){$('#err').textContent='⚠️ '+m;$('#err').hidden=false}
+async function handle(file){if(!file)return;$('#err').hidden=true;busy(true,'جارٍ قراءة وتحليل الملف…');await tick();
+ try{const ext=file.name.split('.').pop().toLowerCase();let sheets;
+  if(ext=='xlsx'||ext=='xls'){if(typeof XLSX=='undefined')throw new Error('تعذّر تحميل مكتبة Excel (يلزم اتصال بالإنترنت لأول مرة). جرّب ملف CSV.');
+   const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});sheets=wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}))}
+  else if(['csv','txt'].includes(ext))sheets=[parseCSV(await file.text())];else throw new Error('صيغة غير مدعومة. استخدم .xlsx أو .xls أو .csv');
+  show(toRows(sheets),file.name)}catch(e){fail(e.message||'حدث خطأ أثناء قراءة الملف.')}finally{busy(false)}}
+function demo(){const D=[['افضل لابتوب للبرمجة','/blog/best-laptop-programming',7.2,18500,.45],['افضل لابتوب للبرمجة','/reviews/laptops',11.4,2600,1],['سعر ايفون 15 في مصر','/prices/iphone-15',5.3,22000,.6],['مقارنة ايفون و سامسونج','/compare/iphone-vs-samsung',9.8,9400,.4],
+ ['كيف اتعلم السيو','/guides/seo-basics',12.6,7800,1],['دورة سيو مجانية','/guides/seo-basics',14.1,4200,1],['ما هو السيو','/guides/seo-basics',8.9,6100,1],['اساسيات السيو للمبتدئين','/guides/seo-basics',16.3,3300,1],['كيف اتعلم السيو','/courses/seo',15.2,1800,1],
+ ['افضل سماعات بلوتوث','/blog/best-headphones',3.1,15000,1],['اصلاح بطء الكمبيوتر','/tips/fix-slow-pc',18.4,5200,1],['طريقة عمل سيرة ذاتية','/blog/cv-guide',6.5,12800,.5],['نماذج سيرة ذاتية جاهزة','/templates/cv',4.4,11000,1.1],
+ ['برنامج تحرير الفيديو مجانا','/software/free-video-editor',24.6,8700,1],['افضل شاشة للالعاب','/blog/gaming-monitor',27.3,6400,1],['تحميل برنامج ويندوز 11','/downloads/windows-11',33.5,3900,1],['ما هو الذكاء الاصطناعي','/blog/what-is-ai',9.2,14500,.55],
+ ['seo audit checklist','/blog/seo-audit',6.8,5400,.5],['كيف تزيد سرعة الموقع','/guides/site-speed',10.7,4700,1],['تحسين سرعة ووردبريس','/guides/site-speed',13.2,2900,1],['استضافة ووردبريس','/hosting/wordpress',19.8,2400,1],
+ ['اخبار التكنولوجيا اليوم','/news/tech-archive-2021',41.2,900,1],['اسعار الذهب','/old/gold-2020',46.8,1200,1],['وصفة كيك الشوكولاتة','/recipes/chocolate-cake',2.4,8000,1],['طريقة عمل بيتزا','/recipes/pizza',5.9,9700,.9],['افضل vpn','/reviews/vpn',8.1,6800,.55]];
+ let s=7;const rnd=()=>(s=(s*9301+49297)%233280)/233280;
+ show(D.map(d=>({q:d[0],p:'https://example.com'+d[1],pos:d[2],i:d[3],c:Math.round(d[3]*ectr(d[2])*d[4]*(.85+.3*rnd()))})),'بيانات تجريبية (Demo)')}
+const drop=$('#drop');
+drop.onclick=()=>$('#file').click();drop.onkeydown=e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();$('#file').click()}};
+$('#file').onchange=e=>{handle(e.target.files[0]);e.target.value=''};
+['dragenter','dragover'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.add('on')}));
+['dragleave','drop'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.remove('on')}));
+drop.addEventListener('drop',e=>handle(e.dataTransfer.files[0]));
+$('#demo').onclick=async()=>{busy(true);await tick();try{demo()}finally{busy(false)}};
+$('#reset').onclick=()=>{$('#app').hidden=true;$('#hero').hidden=false};
+$('#prev').onclick=()=>{pageNo--;render();window.scrollTo(0,200)};$('#next').onclick=()=>{pageNo++;render();window.scrollTo(0,200)};
+let dt;['fT','fP','fS'].forEach(i=>$('#'+i).onchange=apply);['fA','fB','fM','fU','fQ'].forEach(i=>$('#'+i).oninput=()=>{clearTimeout(dt);dt=setTimeout(apply,250)});
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x==b));$('#pTop').hidden=b.dataset.t!='top';$('#pPlan').hidden=b.dataset.t!='plan'});
+$('#exp').onclick=()=>{const h=['الاستعلام','الرابط','المركز','مرات الظهور','CTR','النقرات','درجة الفرصة','نوع الفرصة','الأولوية','السبب','الإجراء المقترح','مكسب نظري محتمل (نقرات)'];
+ const q=v=>'"'+String(v).replace(/"/g,'""').replace(/^([=+\-@])/,"'$1")+'"';
+ const rows=VIEW.map(o=>[o.q,o.u,D1(o.pos),Math.round(o.i),P(o.ctr),Math.round(o.c),o.score,T[o.t][0],PR[o.pr],o.why,o.act,Math.round(o.gain)].map(q).join(','));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.map(q).join(',')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='seo-opportunities.csv';a.click();URL.revokeObjectURL(a.href)};

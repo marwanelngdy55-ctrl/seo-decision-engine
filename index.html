@@ -1,79 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SEO Decision Engine – turn Search Console data into prioritized actions</title>
-<meta name="description" content="Free, private SEO tool. Upload a Google Search Console CSV and get prioritized SEO opportunities. Runs entirely in your browser.">
-<link rel="stylesheet" href="styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>محرك قرارات السيو | SEO Decision Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top">
-  <div class="wrap bar">
-    <div class="brand"><span class="logo" aria-hidden="true"></span>SEO Decision Engine</div>
-    <span class="privacy-pill">Processed locally. Nothing is uploaded.</span>
-  </div>
+ <div class="brand"><span class="logo">◢</span>محرك قرارات السيو</div>
+ <div class="priv">🔒 بياناتك تُعالج محليًا داخل متصفحك ولا يتم رفعها إلى أي خادم.</div>
 </header>
+<main>
+<section id="hero">
+ <div class="hero">
+  <div>
+   <h1>حوّل بيانات Google Search Console إلى قرارات سيو مرتبة بالأولوية</h1>
+   <p>ارفع ملف التصدير (Excel أو CSV) وسيحدد التطبيق المكاسب السريعة وفرص المحتوى وفرص تحسين CTR والروابط الداخلية وتكرار المنافسة بين الصفحات، مع خطة عمل واضحة. مجاني بالكامل وبدون أي واجهة برمجية مدفوعة.</p>
+   <button class="btn p" id="demo">جرّب بيانات تجريبية</button>
+  </div>
+  <div>
+   <div class="drop" id="drop" tabindex="0" role="button" aria-label="رفع ملف">
+    <b>اسحب الملف هنا أو اضغط للاختيار</b>
+    <small>.xlsx أو .xls أو .csv — من تقرير الأداء في Search Console</small>
+   </div>
+   <input type="file" id="file" accept=".csv,.xlsx,.xls,.txt" hidden>
+   <div class="err" id="err" hidden role="alert"></div>
+  </div>
+ </div>
+ <div class="how">
+  <div><b>١. صدّر البيانات</b>من Search Console ← الأداء ← تصدير (يُفضّل عرض الاستعلامات والصفحات معًا).</div>
+  <div><b>٢. ارفع الملف</b>يتم التعرف على الأعمدة تلقائيًا بالعربية أو الإنجليزية.</div>
+  <div><b>٣. اتخذ القرار</b>فرص مرتبة بدرجة 0–100 مع سبب وإجراء مقترح.</div>
+ </div>
+</section>
 
-<main class="wrap">
-  <section id="intro" class="intro">
-    <h1>Know which SEO fix to make first.</h1>
-    <p class="lead">Upload a Google Search Console export. Get ranked opportunities, estimated upside and a clear action plan.</p>
-    <div id="drop" class="drop" tabindex="0" role="button" aria-label="Upload Search Console CSV">
-      <strong>Drop your CSV here</strong>
-      <span>or click to choose a file (Query, Page, Clicks, Impressions, CTR, Position)</span>
-      <input id="file" type="file" accept=".csv,text/csv" hidden>
-    </div>
-    <div class="row-c"><button id="demoBtn" class="btn ghost">Try demo data</button></div>
-    <p class="privacy">Your data is processed locally in your browser and is not uploaded to a server.</p>
-    <p class="hint">Export from Search Console → Performance → Export → Download CSV. For query + page data, use the API/Looker Studio export or a "Queries × Pages" report.</p>
-  </section>
-
-  <div id="loading" class="state" hidden><div class="spin"></div><p id="loadMsg">Analyzing…</p></div>
-  <div id="error" class="error" role="alert" hidden></div>
-
-  <section id="results" hidden>
-    <div class="head-row">
-      <h2 id="srcName">Overview</h2>
-      <button id="resetBtn" class="btn ghost">Load another file</button>
-    </div>
-    <div id="kpis" class="kpis"></div>
-
-    <h2>Action plan</h2>
-    <p class="sub">Ordered by combined opportunity score. Expected gains are heuristic estimates, not forecasts.</p>
-    <div id="plan" class="plan"></div>
-
-    <div class="head-row">
-      <h2>Top opportunities <span id="count" class="muted"></span></h2>
-      <button id="exportBtn" class="btn">Export CSV</button>
-    </div>
-    <div class="filters">
-      <label>Type<select id="fType"></select></label>
-      <label>Priority<select id="fPri"><option value="">All</option><option>High</option><option>Medium</option><option>Low</option></select></label>
-      <label>Position<span class="pair"><input id="fPmin" type="number" min="0" placeholder="min"><input id="fPmax" type="number" min="0" placeholder="max"></span></label>
-      <label>Min impressions<input id="fImp" type="number" min="0" placeholder="0"></label>
-      <label>Query contains<input id="fQ" type="search" placeholder="keyword"></label>
-      <label>URL contains<input id="fU" type="search" placeholder="/blog/"></label>
-    </div>
-    <div id="list" class="list"></div>
-    <div class="row-c"><button id="moreBtn" class="btn ghost" hidden>Show more</button></div>
-
-    <details class="method">
-      <summary>How the SEO Opportunity Score works</summary>
-      <p>The <b>SEO Opportunity Score (0–100)</b> is a proprietary heuristic made for this tool. It is <b>not</b> a Google metric and does not predict rankings or traffic.</p>
-      <ul>
-        <li><b>Impressions (25)</b>: log-scaled demand versus your largest row.</li>
-        <li><b>Potential traffic gain (30)</b>: extra clicks if the row reached a modestly better position or its expected CTR. Uses a generic CTR-by-position curve, so treat it as an estimate.</li>
-        <li><b>Position (18)</b>: positions 4–10 score highest, then 11–20, then lower.</li>
-        <li><b>CTR gap (10)</b>: how far actual CTR is below the generic curve.</li>
-        <li><b>Clicks (7)</b>: existing traffic worth protecting or growing.</li>
-        <li><b>Page/query relationship (10)</b>: cannibalization and pages ranking for many related queries score higher.</li>
-      </ul>
-      <p>Priority: High ≥ 70, Medium 45–69, Low &lt; 45. Always validate against the live SERP, search intent and your own data.</p>
-    </details>
-  </section>
+<section id="app" hidden>
+ <div class="bar">
+  <div id="meta" class="priv"></div>
+  <div><button class="btn" id="exp">⬇ تصدير التقرير CSV</button> <button class="btn" id="reset">رفع ملف جديد</button></div>
+ </div>
+ <div class="kpis" id="kpis"></div>
+ <div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-t="top">أهم الفرص</button>
+  <button class="tab" role="tab" aria-selected="false" data-t="plan">خطة العمل</button>
+ </div>
+ <div id="pTop">
+  <div class="filters">
+   <label>نوع الفرصة<select id="fT"></select></label>
+   <label>الأولوية<select id="fP"><option value="">الكل</option><option value="high">عالية</option><option value="med">متوسطة</option><option value="low">منخفضة</option></select></label>
+   <label>نطاق المركز<span class="pair"><input id="fA" type="number" min="0" placeholder="من"><input id="fB" type="number" min="0" placeholder="إلى"></span></label>
+   <label>أقل عدد ظهور<input id="fM" type="number" min="0" placeholder="0"></label>
+   <label>الرابط<input id="fU" placeholder="جزء من الرابط"></label>
+   <label>الاستعلام<input id="fQ" placeholder="بحث في الكلمات"></label>
+  </div>
+  <div class="bar"><span id="cnt" class="priv"></span>
+   <label class="priv">ترتيب: <select id="fS" class="btn"><option value="score">الدرجة</option><option value="gain">المكسب المحتمل</option><option value="i">مرات الظهور</option></select></label></div>
+  <div id="list"></div>
+  <div class="pager"><button class="btn" id="prev">السابق</button><span id="pg"></span><button class="btn" id="next">التالي</button></div>
+ </div>
+ <div id="pPlan" hidden></div>
+ <div class="note">⚠️ <b>درجة فرصة السيو</b> مقياس تقديري (heuristic) مبتكر داخل هذا التطبيق، وليست مقياسًا رسميًا من Google. تعتمد على: مرات الظهور (25) + المكسب المحتمل (30) + موقع الترتيب (20) + فجوة CTR مقارنة بمعدل تقريبي للمركز (15) + النقرات وعلاقة الصفحة بالاستعلام (10). أرقام «المكسب المحتمل» تقديرات نظرية ولا تعني وعدًا بأي ارتفاع في الترتيب أو الزيارات؛ القرار النهائي يحتاج مراجعة بشرية واختبارًا.</div>
+</section>
 </main>
-<footer class="wrap foot">Open source · no tracking · no external requests. Not affiliated with Google.</footer>
+<div class="load" id="load" hidden><div><div class="sp"></div><span id="lt">جارٍ تحليل البيانات…</span></div></div>
+
 <script src="app.js"></script>
 </body>
 </html>
