@@ -64,7 +64,7 @@ dialog label{display:block;margin:10px 0 2px;font-size:13px;color:var(--mut)}dia
 <dialog id="dlg"><form method="dialog">
  <b>الإعدادات (تُحفظ في متصفحك فقط)</b>
  <label>مفتاح Gemini المجاني — <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">احصل عليه من هنا</a></label><input id="sKey" type="password" autocomplete="off">
- <label>النموذج</label><input id="sModel" placeholder="gemini-2.5-flash">
+ <label>النموذج</label><input id="sModel" placeholder="gemini-3.8-flash">
  <label>رابط Worker لجلب العناوين (اختياري، أدق من البروكسيات العامة)</label><input id="sWorker" placeholder="https://xxx.workers.dev">
  <p class="mut" style="font-size:12.5px">بدون Worker يستخدم الموقع بروكسيات مجانية عامة قد تفشل أحيانًا. عند فشل الجلب يُكمل الذكاء الاصطناعي من الاستعلام والرابط.</p>
  <button class="btn p" value="ok">حفظ</button></form></dialog>
@@ -117,7 +117,7 @@ async function getMeta(u){if(META[u])return META[u];if(!okU(u))return{};const w=
 
 /* ---- الذكاء الاصطناعي (Gemini المجاني + بحث Google) ---- */
 function intent(q){q=q.toLowerCase();return/كيف|ما هو|ما هي|طريقة|شرح|لماذا|ليه|دليل|how|what|why|guide/.test(q)?'معلوماتية':/سعر|اسعار|أسعار|شراء|اشتري|تحميل|عروض|price|buy|download/.test(q)?'شرائية':/افضل|أفضل|مقارنة|مراجعة|vs|best|review/.test(q)?'مقارنة':'غير واضحة'}
-async function ai(o,m){const key=LS('key');if(!key)throw new Error('NOKEY');const model=LS('model')||'gemini-2.5-flash';
+async function ai(o,m){const key=LS('key');if(!key)throw new Error('NOKEY');const model=LS('model')||'gemini-3.8-flash';
  const prompt=`أنت خبير سيو عربي محترف. مهمتك تحسين نتيجة بحث موقع في جوجل.
 الاستعلام: «${o.q}»
 الرابط: ${o.u||'غير معروف'}
@@ -133,7 +133,7 @@ async function ai(o,m){const key=LS('key');if(!key)throw new Error('NOKEY');cons
 أعد JSON فقط بلا أي نص آخر وبالشكل: {"serp":[{"t":"عنوان نتيجة","d":"وصفها المختصر"}],"gap":"جملتان عما ينقصني","titles":["","",""],"descs":["",""]}`;
  const call=async g=>{const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],...(g?{tools:[{google_search:{}}]}:{}),generationConfig:{temperature:.7}})});
   const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||r.status);return j};
- let j,g=1;try{j=await call(1)}catch(e){if(/api key|API_KEY|permission|quota|exhausted/i.test(e.message))throw e;g=0;j=await call(0)}
+ let j,g=1;try{j=await call(1)}catch(e){if(/api key|API_KEY|permission/i.test(e.message))throw e;g=0;j=await call(0)}
  const tx=((j.candidates||[])[0]?.content?.parts||[]).map(p=>p.text||'').join(''),mm=tx.match(/\{[\s\S]*\}/);if(!mm)throw new Error('رد غير مفهوم من النموذج، أعد المحاولة.');
  const r=JSON.parse(mm[0]);r.grounded=g;return r}
 
