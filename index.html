@@ -3,72 +3,187 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>محرك قرارات السيو | SEO Decision Engine</title>
+<title>محرك قرارات السيو</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="style.css">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#0f1c2e;--mut:#5b6b7e;--line:#e0e5eb;--acc:#0a7d63;--hi:#c2410c;--r:12px}
+@media(prefers-color-scheme:dark){:root{--bg:#0c141f;--card:#142031;--ink:#e8eef5;--mut:#93a3b8;--line:#243449;--acc:#2dd4a8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 Cairo,"Segoe UI",Tahoma,sans-serif}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header b{font-size:18px;font-weight:800}
+main{max-width:980px;margin:0 auto;padding:20px 14px 60px}
+.btn{border:1px solid var(--line);background:var(--card);padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--acc)}.btn.p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn:disabled{opacity:.5;cursor:wait}
+.drop{border:2px dashed var(--line);background:var(--card);border-radius:16px;padding:60px 20px;text-align:center;cursor:pointer;margin:30px 0 14px}
+.drop:hover,.drop.on{border-color:var(--acc)}.drop b{font-size:20px;display:block}.drop small,.mut{color:var(--mut)}
+.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin:12px 0}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.kp div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--mut)}.kp strong{display:block;font-size:22px;color:var(--ink)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.bar input,.bar select{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--card)}.bar input{flex:1;min-width:140px}
+.it{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border-inline-start:5px solid var(--c)}
+.hd{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.q{font-weight:800;font-size:17px;word-break:break-word}.u{font-size:12.5px;color:var(--mut);direction:ltr;text-align:right;word-break:break-all}
+.sc{background:var(--ink);color:var(--bg);font-weight:800;border-radius:10px;padding:2px 10px;font-size:18px}
+.tg{display:inline-block;font-size:12px;font-weight:600;padding:1px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.mt{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:8px 0}.mt b{color:var(--ink)}
+.cur{background:var(--bg);border-radius:10px;padding:8px 12px;font-size:14px;margin:8px 0}.cur small{color:var(--mut)}
+.w{color:var(--hi)}.g{color:var(--acc)}
+.res{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
+.res h4{margin:8px 0 4px;font-size:13px;color:var(--mut)}
+.row{display:flex;gap:8px;align-items:center;background:var(--bg);border-radius:8px;padding:5px 10px;margin:4px 0}.row span{flex:1;word-break:break-word}.row small{color:var(--mut);white-space:nowrap}
+details{font-size:13.5px;margin:6px 0}summary{cursor:pointer;color:var(--mut)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:460px;width:92%}
+dialog label{display:block;margin:10px 0 2px;font-size:13px;color:var(--mut)}dialog input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg);direction:ltr}
+[hidden]{display:none!important}
+@media(max-width:700px){.kp{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <body>
-<header class="top">
- <div class="brand"><span class="logo">◢</span>محرك قرارات السيو</div>
- <div class="priv">🔒 بياناتك تُعالج محليًا داخل متصفحك ولا يتم رفعها إلى أي خادم.</div>
-</header>
+<header><b>◢ محرك قرارات السيو</b><button class="btn" id="cfg">⚙ الإعدادات</button></header>
 <main>
 <section id="hero">
- <div class="hero">
-  <div>
-   <h1>حوّل بيانات Google Search Console إلى قرارات سيو مرتبة بالأولوية</h1>
-   <p>ارفع ملف التصدير (Excel أو CSV) وسيحدد التطبيق المكاسب السريعة وفرص المحتوى وفرص تحسين CTR والروابط الداخلية وتكرار المنافسة بين الصفحات، مع خطة عمل واضحة. مجاني بالكامل وبدون أي واجهة برمجية مدفوعة.</p>
-   <button class="btn p" id="demo">جرّب بيانات تجريبية</button>
-  </div>
-  <div>
-   <div class="drop" id="drop" tabindex="0" role="button" aria-label="رفع ملف">
-    <b>اسحب الملف هنا أو اضغط للاختيار</b>
-    <small>.xlsx أو .xls أو .csv — من تقرير الأداء في Search Console</small>
-   </div>
-   <input type="file" id="file" accept=".csv,.xlsx,.xls,.txt" hidden>
-   <div class="err" id="err" hidden role="alert"></div>
-  </div>
- </div>
- <div class="how">
-  <div><b>١. صدّر البيانات</b>من Search Console ← الأداء ← تصدير (يُفضّل عرض الاستعلامات والصفحات معًا).</div>
-  <div><b>٢. ارفع الملف</b>يتم التعرف على الأعمدة تلقائيًا بالعربية أو الإنجليزية.</div>
-  <div><b>٣. اتخذ القرار</b>فرص مرتبة بدرجة 0–100 مع سبب وإجراء مقترح.</div>
- </div>
+ <div class="drop" id="drop" tabindex="0" role="button"><b>اسحب ملف Search Console هنا أو اضغط للاختيار</b><small>xlsx / csv — يُعالج داخل متصفحك فقط</small></div>
+ <input type="file" id="file" accept=".csv,.xlsx,.xls,.txt" hidden>
+ <button class="btn" id="demo">جرّب بيانات تجريبية</button>
+ <div class="err" id="err" hidden></div>
 </section>
-
 <section id="app" hidden>
+ <div class="kp" id="kp"></div>
  <div class="bar">
-  <div id="meta" class="priv"></div>
-  <div><button class="btn" id="exp">⬇ تصدير التقرير CSV</button> <button class="btn" id="reset">رفع ملف جديد</button></div>
+  <select id="fT"></select><input id="fQ" placeholder="بحث في الكلمة أو الرابط">
+  <button class="btn p" id="bulk">✨ حسّن أعلى 10</button><button class="btn" id="exp">⬇ CSV</button><button class="btn" id="reset">ملف جديد</button>
  </div>
- <div class="kpis" id="kpis"></div>
- <div class="tabs" role="tablist">
-  <button class="tab" role="tab" aria-selected="true" data-t="top">أهم الفرص</button>
-  <button class="tab" role="tab" aria-selected="false" data-t="plan">خطة العمل</button>
-  <button class="tab" role="tab" aria-selected="false" data-t="ov">نظرة عامة</button>
- </div>
- <div id="pTop">
-  <div class="filters">
-   <label>نوع الفرصة<select id="fT"></select></label>
-   <label>الأولوية<select id="fP"><option value="">الكل</option><option value="high">عالية</option><option value="med">متوسطة</option><option value="low">منخفضة</option></select></label>
-   <label>نطاق المركز<span class="pair"><input id="fA" type="number" min="0" placeholder="من"><input id="fB" type="number" min="0" placeholder="إلى"></span></label>
-   <label>أقل عدد ظهور<input id="fM" type="number" min="0" placeholder="0"></label>
-   <label>الرابط<input id="fU" placeholder="جزء من الرابط"></label>
-   <label>الاستعلام<input id="fQ" placeholder="بحث في الكلمات"></label>
-  </div>
-  <div class="bar"><span id="cnt" class="priv"></span>
-   <label class="priv">ترتيب: <select id="fS" class="btn"><option value="score">الدرجة</option><option value="gain">المكسب المحتمل</option><option value="i">مرات الظهور</option></select></label></div>
-  <div id="list"></div>
-  <div class="pager"><button class="btn" id="prev">السابق</button><span id="pg"></span><button class="btn" id="next">التالي</button></div>
- </div>
- <div id="pPlan" hidden></div>
- <div id="pOv" hidden></div>
- <div class="note">⚠️ <b>درجة فرصة السيو</b> مقياس تقديري (heuristic) مبتكر داخل هذا التطبيق، وليست مقياسًا رسميًا من Google. تعتمد على: مرات الظهور (25) + المكسب المحتمل (30) + موقع الترتيب (20) + فجوة CTR مقارنة بمعدل تقريبي للمركز (15) + النقرات وعلاقة الصفحة بالاستعلام (10). أرقام «المكسب المحتمل» تقديرات نظرية ولا تعني وعدًا بأي ارتفاع في الترتيب أو الزيارات؛ القرار النهائي يحتاج مراجعة بشرية واختبارًا.</div>
+ <div id="list"></div><div style="text-align:center"><button class="btn" id="more">عرض المزيد</button></div>
+ <p class="mut" style="font-size:12.5px">الدرجة والمكسب تقديران نظريان (ليسا من Google). راجع أي عنوان أو وصف مقترح قبل نشره ليطابق محتوى الصفحة فعلًا.</p>
 </section>
 </main>
-<div class="load" id="load" hidden><div><div class="sp"></div><span id="lt">جارٍ تحليل البيانات…</span></div></div>
+<dialog id="dlg"><form method="dialog">
+ <b>الإعدادات (تُحفظ في متصفحك فقط)</b>
+ <label>مفتاح Gemini المجاني — <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">احصل عليه من هنا</a></label><input id="sKey" type="password" autocomplete="off">
+ <label>النموذج</label><input id="sModel" placeholder="gemini-2.5-flash">
+ <label>رابط Worker لجلب العناوين (اختياري، أدق من البروكسيات العامة)</label><input id="sWorker" placeholder="https://xxx.workers.dev">
+ <p class="mut" style="font-size:12.5px">بدون Worker يستخدم الموقع بروكسيات مجانية عامة قد تفشل أحيانًا. عند فشل الجلب يُكمل الذكاء الاصطناعي من الاستعلام والرابط.</p>
+ <button class="btn p" value="ok">حفظ</button></form></dialog>
 
-<script src="app.js"></script>
+<script>
+const $=s=>document.querySelector(s),N=x=>Math.round(x).toLocaleString('en-US'),P=x=>(x*100).toFixed(1)+'%',
+esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS=k=>{try{return localStorage.getItem(k)||''}catch(e){return''}},SV=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const T={ctr:['تحسين CTR','#b45309'],quick:['مكسب سريع','#2563eb'],content:['فرصة محتوى','#7c3aed'],cannibal:['تكرار منافسة','#dc2626']};
+let ITEMS=[],VIEW=[],SHOW=20,META={},AIR={},ROWS=[],TOT={};
+
+/* ---- قراءة الملف ---- */
+function parseCSV(t){t=t.replace(/^\uFEFF/,'');const f=t.split('\n')[0],d=[',',';','\t'].map(x=>[x,f.split(x).length]).sort((a,b)=>b[1]-a[1])[0][0],rows=[];let r=[],c='',q=false;
+ for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==d){r.push(c);c=''}else if(ch=='\n'){r.push(c.replace(/\r$/,''));rows.push(r);r=[];c=''}else c+=ch}
+ if(c||r.length){r.push(c.replace(/\r$/,''));rows.push(r)}return rows.filter(r=>r.some(x=>String(x).trim()!==''))}
+function num(v){if(typeof v=='number')return v;let s=String(v).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g,'.').replace(/[٬\s%]/g,'');s=/^-?\d+,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');return parseFloat(s)}
+const RX=[['clicks',/click|^النقرات$|^نقرات$/],['impr',/impression|ظهور|انطباع/],['pos',/position|موضع|ترتيب|المركز/],['page',/page|url|landing|صفح|رابط/],['query',/quer|keyword|استعلام|كلمة|عبارة/]];
+function detect(h){const m={};h.forEach((x,i)=>{const n=String(x).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g,'');for(const[k,r]of RX)if(!(k in m)&&r.test(n)){m[k]=i;break}});return m}
+function toRows(sheets){let best,bs=-1;for(const tb of sheets){const m=detect(tb[0]||[]),s=Object.keys(m).length+(('query'in m&&'page'in m)?3:0);if(s>bs){bs=s;best={tb,m}}}
+ const{tb,m}=best;if(!('impr'in m)||!('pos'in m)||!('query'in m||'page'in m))throw new Error('لم أتعرف على الأعمدة: لازم استعلام أو صفحة + مرات الظهور + متوسط الترتيب.');
+ const r=tb.slice(1).map(r=>({q:'query'in m?String(r[m.query]).trim():'(غير محدد)',p:'page'in m?String(r[m.page]).trim():'',c:'clicks'in m?(num(r[m.clicks])||0):0,i:num(r[m.impr]),pos:num(r[m.pos])})).filter(r=>r.i>0&&isFinite(r.pos));
+ if(!r.length)throw new Error('لا توجد صفوف صالحة.');return r}
+
+/* ---- التحليل ---- */
+const EX=[.28,.15,.11,.08,.065,.05,.04,.032,.027,.023];
+const ectr=p=>{if(p<=1)return EX[0];if(p>=10)return Math.max(.003,.023*Math.exp(-(p-10)/8));const i=Math.floor(p);return EX[i-1]+(EX[i]-EX[i-1])*(p-i)};
+const posS=p=>p<=3?4:p<=10?20:p<=15?16:p<=20?11:p<=30?6:2;
+function analyze(rows){const si=rows.map(r=>r.i).sort((a,b)=>a-b),thr=Math.max(20,si[si.length>>1]||0),out=[],qg={};
+ rows.forEach(r=>{(qg[r.q.toLowerCase()]||(qg[r.q.toLowerCase()]=[])).push(r);if(r.i<thr)return;const ctr=r.c/r.i,ex=ectr(r.pos);let t,g;
+  if(r.pos<=10&&ctr<.7*ex){t='ctr';g=r.i*(ex-ctr)*.5}else if(r.pos>4&&r.pos<=20){t='quick';g=r.i*Math.max(0,ectr(r.pos>10?8:Math.max(1,Math.round(r.pos)-2))-ctr)*.5}else if(r.pos>20){t='content';g=r.i*Math.max(0,ectr(10)-ctr)*.3}else return;
+  out.push({t,q:r.q,u:r.p,pos:r.pos,i:r.i,c:r.c,ctr,ex,gain:g})});
+ Object.values(qg).forEach(a=>{const ps={};a.forEach(r=>{const x=ps[r.p]||(ps[r.p]={u:r.p,i:0,c:0,w:0});x.i+=r.i;x.c+=r.c;x.w+=r.pos*r.i});
+  const L=Object.values(ps),Tt=L.reduce((s,x)=>s+x.i,0),big=L.filter(x=>x.i>=Math.max(5,Tt*.1));if(!a[0].p||big.length<2||Tt<thr)return;
+  big.sort((x,y)=>y.c-x.c||y.i-x.i);const c=L.reduce((s,x)=>s+x.c,0),w=L.reduce((s,x)=>s+x.w,0)/Tt;
+  out.push({t:'cannibal',q:a[0].q,u:big[0].u,urls:big.map(x=>x.u),pos:w,i:Tt,c,ctr:c/Tt,ex:ectr(w),gain:Tt*Math.max(0,ectr(Math.max(1,w-2))-c/Tt)*.5})});
+ const M={i:1,g:1,c:1};out.forEach(o=>{M.i=Math.max(M.i,o.i);M.g=Math.max(M.g,o.gain);M.c=Math.max(M.c,o.c)});const l=Math.log1p;
+ out.forEach(o=>{o.score=Math.round(Math.min(100,l(o.i)/l(M.i)*25+l(o.gain)/l(M.g)*30+posS(o.pos)+(o.pos<=20?Math.max(0,Math.min(1,(o.ex-o.ctr)/o.ex))*15:0)+l(o.c)/l(M.c)*5+(o.t=='cannibal'?5:0)))});
+ out.sort((a,b)=>b.score-a.score).forEach((o,k)=>o.id=k);
+ const ci=rows.reduce((s,r)=>s+r.i,0),cc=rows.reduce((s,r)=>s+r.c,0);
+ TOT={k:new Set(rows.map(r=>r.q)).size,i:ci,ctr:cc/ci,n:out.length};return out}
+
+/* ---- جلب العنوان والوصف (مجاني) ---- */
+const okU=u=>/^https?:\/\//i.test(u)&&!/example\.com/.test(u);
+async function getMeta(u){if(META[u])return META[u];if(!okU(u))return{};const w=LS('worker'),e=encodeURIComponent(u),tr=[];
+ if(w)tr.push(w+(w.includes('?')?'&':'?')+'url='+e);tr.push('https://api.allorigins.win/raw?url='+e,'https://corsproxy.io/?url='+e);
+ for(const t of tr){try{const r=await fetch(t,{signal:AbortSignal.timeout(12000)});if(!r.ok)continue;const x=await r.text();let m;
+  if(x[0]=='{')m=JSON.parse(x);else{const d=new DOMParser().parseFromString(x,'text/html');m={title:(d.title||'').trim(),desc:(d.querySelector('meta[name="description" i]')||{}).content||''}}
+  if(m.title||m.desc)return META[u]=m}catch(e){}}
+ return META[u]={}}
+
+/* ---- الذكاء الاصطناعي (Gemini المجاني + بحث Google) ---- */
+function intent(q){q=q.toLowerCase();return/كيف|ما هو|ما هي|طريقة|شرح|لماذا|ليه|دليل|how|what|why|guide/.test(q)?'معلوماتية':/سعر|اسعار|أسعار|شراء|اشتري|تحميل|عروض|price|buy|download/.test(q)?'شرائية':/افضل|أفضل|مقارنة|مراجعة|vs|best|review/.test(q)?'مقارنة':'غير واضحة'}
+async function ai(o,m){const key=LS('key');if(!key)throw new Error('NOKEY');const model=LS('model')||'gemini-2.5-flash';
+ const prompt=`أنت خبير سيو عربي محترف. مهمتك تحسين نتيجة بحث موقع في جوجل.
+الاستعلام: «${o.q}»
+الرابط: ${o.u||'غير معروف'}
+العنوان الحالي: ${m.title||'غير متاح'}
+الوصف الحالي: ${m.desc||'غير متاح'}
+الأداء: المركز ${o.pos.toFixed(1)}، ${N(o.i)} ظهور، CTR ${P(o.ctr)} (المتوقع ~${P(o.ex)}). نية البحث المرجّحة: ${intent(o.q)}.
+
+الخطوات:
+1) ابحث في جوجل عن الاستعلام نفسه وافحص أعلى 5 نتائج: عناوينها وأوصافها وما يجعلها جاذبة.
+2) حدّد ما ينقص نتيجة موقعي مقارنة بهم (زاوية، رقم، فائدة، وضوح، مطابقة النية).
+3) اكتب 3 عناوين مقترحة (حتى 60 حرفًا، تتضمن الاستعلام أو صيغته القريبة، بلا تضليل ولا مبالغة) ووصفين (140–155 حرفًا، فائدة واضحة + دعوة لإجراء).
+التزم بما يمكن أن تحتويه الصفحة فعلًا حسب رابطها وعنوانها الحالي، ولا تضف وعودًا غير مؤكدة، ولا تنسخ عناوين المنافسين.
+أعد JSON فقط بلا أي نص آخر وبالشكل: {"serp":[{"t":"عنوان نتيجة","d":"وصفها المختصر"}],"gap":"جملتان عما ينقصني","titles":["","",""],"descs":["",""]}`;
+ const call=async g=>{const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],...(g?{tools:[{google_search:{}}]}:{}),generationConfig:{temperature:.7}})});
+  const j=await r.json();if(!r.ok)throw new Error((j.error&&j.error.message)||r.status);return j};
+ let j,g=1;try{j=await call(1)}catch(e){if(/api key|API_KEY|permission|quota|exhausted/i.test(e.message))throw e;g=0;j=await call(0)}
+ const tx=((j.candidates||[])[0]?.content?.parts||[]).map(p=>p.text||'').join(''),mm=tx.match(/\{[\s\S]*\}/);if(!mm)throw new Error('رد غير مفهوم من النموذج، أعد المحاولة.');
+ const r=JSON.parse(mm[0]);r.grounded=g;return r}
+
+/* ---- العرض ---- */
+const chk=(t,a,b)=>{const l=[...t].length;return`<span class="${l>b||l<a?'w':'g'}">${l>b||l<a?'⚠':'✓'} ${l} حرف</span>`};
+function card(o){const m=META[o.u]||{},r=AIR[o.id],c=T[o.t][1];
+ const cur=m.title||m.desc?`<div class="cur"><small>العنوان الحالي</small> ${chk(m.title||'',25,60)}<div>${esc(m.title||'—')}</div><small>الوصف الحالي</small> ${chk(m.desc||'',70,160)}<div>${esc(m.desc||'—')}</div></div>`:'';
+ const row=x=>`<div class="row"><span>${esc(x)}</span><small>${[...x].length}</small><button class="btn" data-cp="${esc(x)}">نسخ</button></div>`;
+ const res=r?(r.err?`<div class="err">${esc(r.err)}</div>`:`<div class="res">${r.gap?`<h4>ما ينقصك مقارنة بالأعلى${r.grounded?'':' (بدون بحث مباشر)'}</h4><div>${esc(r.gap)}</div>`:''}
+  ${(r.serp||[]).length?`<details><summary>أعلى النتائج التي فحصها الذكاء الاصطناعي</summary>${r.serp.map(s=>`<div>• <b>${esc(s.t||'')}</b> — ${esc(s.d||'')}</div>`).join('')}</details>`:''}
+  <h4>عناوين مقترحة</h4>${(r.titles||[]).map(row).join('')}<h4>وصف مقترح</h4>${(r.descs||[]).map(row).join('')}</div>`):'';
+ return`<article class="it" style="--c:${c}"><div class="hd"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div><div><span class="tg">${T[o.t][0]}</span> <span class="sc">${o.score}</span></div></div>
+ <div class="mt"><span>المركز <b>${o.pos.toFixed(1)}</b></span><span>ظهور <b>${N(o.i)}</b></span><span>نقرات <b>${N(o.c)}</b></span><span>CTR <b>${P(o.ctr)}</b> (متوقع ${P(o.ex)})</span><span>مكسب محتمل <b>~${N(o.gain)}</b></span></div>
+ ${cur}<button class="btn p" data-ai="${o.id}">${r&&!r.err?'↻ أعد التوليد':'✨ اجلب العنوان واقترح عنوانًا ووصفًا'}</button>${res}</article>`}
+function render(){$('#list').innerHTML=VIEW.slice(0,SHOW).map(card).join('')||'<p class="mut">لا توجد فرص مطابقة.</p>';$('#more').hidden=VIEW.length<=SHOW}
+function apply(){const t=$('#fT').value,q=$('#fQ').value.toLowerCase();VIEW=ITEMS.filter(o=>(!t||o.t==t)&&(!q||o.q.toLowerCase().includes(q)||(o.u||'').toLowerCase().includes(q)));SHOW=20;render()}
+async function run(id,btn){const o=ITEMS[id];if(btn){btn.disabled=true;btn.textContent='جارٍ العمل…'}
+ try{const m=await getMeta(o.u);AIR[id]=await ai(o,m)}catch(e){if(e.message=='NOKEY'){$('#dlg').showModal();AIR[id]=null;delete AIR[id]}else AIR[id]={err:'تعذّر التوليد: '+e.message}}
+ render()}
+async function prefetch(){for(const o of ITEMS.slice(0,10)){if(!okU(o.u)||META[o.u])continue;await getMeta(o.u);render()}}
+
+/* ---- الإدخال والأحداث ---- */
+function show(rows){ROWS=rows;ITEMS=analyze(rows);META={};AIR={};
+ $('#kp').innerHTML=[['كلمات',N(TOT.k)],['ظهور',N(TOT.i)],['متوسط CTR',P(TOT.ctr)],['فرص',N(TOT.n)]].map(x=>`<div>${x[0]}<strong>${x[1]}</strong></div>`).join('');
+ $('#fT').innerHTML='<option value="">كل الأنواع</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
+ $('#hero').hidden=true;$('#app').hidden=false;apply();prefetch()}
+async function handle(f){if(!f)return;$('#err').hidden=true;try{const x=f.name.split('.').pop().toLowerCase();let s;
+ if(x=='xlsx'||x=='xls'){if(typeof XLSX=='undefined')throw new Error('مكتبة Excel لم تُحمَّل (تحتاج إنترنت). جرّب CSV.');const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});s=wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}))}
+ else if(x=='csv'||x=='txt')s=[parseCSV(await f.text())];else throw new Error('الصيغة غير مدعومة.');show(toRows(s))}catch(e){$('#err').textContent='⚠️ '+e.message;$('#err').hidden=false}}
+function demo(){const D=[['افضل لابتوب للبرمجة','/blog/best-laptop',7.2,18500,.45],['سعر ايفون 15 في مصر','/prices/iphone-15',5.3,22000,.6],['كيف اتعلم السيو','/guides/seo-basics',12.6,7800,1],['كيف اتعلم السيو','/courses/seo',15.2,3800,1],['افضل سماعات بلوتوث','/blog/best-headphones',3.1,15000,1],['طريقة عمل سيرة ذاتية','/blog/cv-guide',6.5,12800,.5],['برنامج تحرير الفيديو مجانا','/software/free-video-editor',24.6,8700,1],['ما هو الذكاء الاصطناعي','/blog/what-is-ai',9.2,14500,.55],['افضل vpn','/reviews/vpn',8.1,6800,.55]];
+ show(D.map(d=>({q:d[0],p:'https://example.com'+d[1],pos:d[2],i:d[3],c:Math.round(d[3]*ectr(d[2])*d[4])})))}
+const drop=$('#drop');drop.onclick=()=>$('#file').click();drop.onkeydown=e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();$('#file').click()}};
+$('#file').onchange=e=>{handle(e.target.files[0]);e.target.value=''};
+['dragenter','dragover'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.add('on')}));
+['dragleave','drop'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.remove('on')}));
+drop.addEventListener('drop',e=>handle(e.dataTransfer.files[0]));
+$('#demo').onclick=demo;$('#reset').onclick=()=>{$('#app').hidden=true;$('#hero').hidden=false};
+$('#more').onclick=()=>{SHOW+=20;render()};$('#fT').onchange=apply;$('#fQ').oninput=apply;
+$('#list').onclick=e=>{const b=e.target.closest('[data-cp]'),a=e.target.closest('[data-ai]');
+ if(b){navigator.clipboard.writeText(b.dataset.cp).catch(()=>{});b.textContent='تم ✓';setTimeout(()=>b.textContent='نسخ',1200)}
+ if(a)run(+a.dataset.ai,a)};
+$('#bulk').onclick=async e=>{if(!LS('key')){$('#dlg').showModal();return}const b=e.target;b.disabled=true;
+ for(const o of VIEW.slice(0,10)){if(AIR[o.id]&&!AIR[o.id].err)continue;b.textContent=`جارٍ العمل (${o.id+1})…`;await run(o.id);await new Promise(r=>setTimeout(r,6500))}
+ b.disabled=false;b.textContent='✨ حسّن أعلى 10'};
+$('#cfg').onclick=()=>{$('#sKey').value=LS('key');$('#sModel').value=LS('model');$('#sWorker').value=LS('worker');$('#dlg').showModal()};
+$('#dlg').onclose=()=>{SV('key',$('#sKey').value.trim());SV('model',$('#sModel').value.trim());SV('worker',$('#sWorker').value.trim())};
+$('#exp').onclick=()=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""').replace(/^([=+\-@])/,"'$1")+'"',
+ h=['الاستعلام','الرابط','المركز','ظهور','نقرات','CTR','الدرجة','النوع','العنوان الحالي','الوصف الحالي','عنوان مقترح 1','عنوان مقترح 2','عنوان مقترح 3','وصف مقترح 1','وصف مقترح 2'];
+ const rows=VIEW.map(o=>{const m=META[o.u]||{},r=AIR[o.id]||{},t=r.titles||[],d=r.descs||[];return[o.q,o.u,o.pos.toFixed(1),Math.round(o.i),Math.round(o.c),P(o.ctr),o.score,T[o.t][0],m.title,m.desc,t[0],t[1],t[2],d[0],d[1]].map(q).join(',')});
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.map(q).join(',')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='seo-opportunities.csv';a.click()};
+</script>
 </body>
 </html>
