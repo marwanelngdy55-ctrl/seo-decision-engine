@@ -4,7 +4,7 @@ const T={quick:['مكاسب سريعة','#2563eb'],content:['فرص محتوى',
 const PR={high:'عالية',med:'متوسطة',low:'منخفضة'};
 const PW={ctr:'الصفحة ظاهرة فعلًا في الصفحة الأولى، فتحسين العنوان والوصف لا يتطلب تغيير الترتيب.',quick:'الكلمات قريبة من الصفحة الأولى أو أعلاها، وتحسينات المحتوى الموجّهة غالبًا أقل تكلفة من إنشاء صفحات جديدة.',content:'هناك طلب بحث ظاهر لكن الموقع ضعيف في النتائج، مما يشير لفجوة في تغطية النية.',link:'صفحات تظهر لعدة استعلامات بمتوسط ترتيب متوسط وقد تستفيد من دعم داخلي.',cannibal:'تعدد الصفحات لنفس الاستعلام يشتت الإشارات ويصعّب على Google اختيار الصفحة الأنسب.',low:'ظهور بلا نقرات تقريبًا: إما أن المحتوى لا يطابق النية أو أن الصفحة لا تستحق الاستثمار.'};
 const PA={ctr:'اختبر عناوين ووصفًا أكثر توافقًا مع نية البحث وراقب CTR 2–4 أسابيع.',quick:'حدّث المحتوى وعمّقه، حسّن H1، وأضف روابط داخلية بنص مرتبط بالكلمة.',content:'راجع أعلى النتائج للكلمة وأنشئ أو وسّع المحتوى ليغطي النية بالكامل.',link:'أضف روابط داخلية من صفحات قوية وذات صلة بنص وصفي.',cannibal:'حدد صفحة رئيسية لكل استعلام ثم ادمج أو فرّق نية بقية الصفحات.',low:'قيّم الصفحة: حسّنها، أو ادمجها مع صفحة أقوى، أو فكّر في إزالتها بحذر.'};
-let ITEMS=[],VIEW=[],pageNo=1,TOT={},SZ=20,fname='';
+let ROWS=[],TITLES={},ITEMS=[],VIEW=[],pageNo=1,TOT={},SZ=20,fname='';
 
 /* ---------- قراءة الملفات ---------- */
 function parseCSV(t){t=t.replace(/^\uFEFF/,'');const f=t.split('\n')[0],d=[',',';','\t'].map(x=>[x,f.split(x).length]).sort((a,b)=>b[1]-a[1])[0][0];
@@ -17,13 +17,13 @@ function parseCSV(t){t=t.replace(/^\uFEFF/,'');const f=t.split('\n')[0],d=[',','
  return rows.filter(r=>r.some(x=>String(x).trim()!==''))}
 function toNum(v){if(typeof v=='number')return v;let s=String(v).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g,'.').replace(/[٬\s%]/g,'');
  s=/^-?\d+,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');return parseFloat(s)}
-const RX=[['ctr',/ctr|نسبةالنقر|معدلالنقر/],['clicks',/click|^النقرات$|^نقرات$|^عددالنقرات$/],['impr',/impression|ظهور|انطباع/],['pos',/position|موضع|ترتيب|المركز/],['page',/page|url|landing|صفح|رابط/],['query',/quer|keyword|استعلام|كلمة|عبارة/]];
+const RX=[['title',/title|عنوانالصفحة|^العنوان$/],['ctr',/ctr|نسبةالنقر|معدلالنقر/],['clicks',/click|^النقرات$|^نقرات$|^عددالنقرات$/],['impr',/impression|ظهور|انطباع/],['pos',/position|موضع|ترتيب|المركز/],['page',/page|url|landing|صفح|رابط/],['query',/quer|keyword|استعلام|كلمة|عبارة/]];
 function detect(h){const m={};h.forEach((x,i)=>{const n=String(x).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]/g,'');for(const[k,r]of RX)if(!(k in m)&&r.test(n)){m[k]=i;break}});return m}
 function toRows(sheets){let best,bs=-1;
  for(const tb of sheets){const m=detect(tb[0]||[]);const s=['query','page','impr','pos','clicks'].filter(k=>k in m).length+(('query'in m&&'page'in m)?3:0);if(s>bs){bs=s;best={tb,m}}}
  const{tb,m}=best;
  if(!('impr'in m)||!('pos'in m)||!('query'in m||'page'in m))throw new Error('لم أتعرف على الأعمدة المطلوبة. يجب أن يحتوي الملف على: الاستعلام أو الصفحة، مع مرات الظهور ومتوسط الترتيب (Position).');
- const rows=tb.slice(1).map(r=>({q:'query'in m?String(r[m.query]).trim():'(غير محدد)',p:'page'in m?String(r[m.page]).trim():'',c:'clicks'in m?(toNum(r[m.clicks])||0):0,i:toNum(r[m.impr]),pos:toNum(r[m.pos])})).filter(r=>r.i>0&&isFinite(r.pos));
+ const rows=tb.slice(1).map(r=>({q:'query'in m?String(r[m.query]).trim():'(غير محدد)',p:'page'in m?String(r[m.page]).trim():'',t:'title'in m?String(r[m.title]).trim():'',c:'clicks'in m?(toNum(r[m.clicks])||0):0,i:toNum(r[m.impr]),pos:toNum(r[m.pos])})).filter(r=>r.i>0&&isFinite(r.pos));
  if(!rows.length)throw new Error('لا توجد صفوف صالحة (مرات الظهور والترتيب يجب أن تكون أرقامًا).');
  return rows}
 
@@ -34,7 +34,7 @@ const posS=p=>p<=3?4:p<=10?20:p<=15?16:p<=20?11:p<=30?6:2;
 function analyze(rows){
  const hasP=rows.some(r=>r.p),hasQ=rows.some(r=>r.q!=='(غير محدد)'),si=rows.map(r=>r.i).sort((a,b)=>a-b),thr=Math.max(20,si[si.length>>1]||0);
  const pg={},qg={},out=[],can=new Set();
- rows.forEach(r=>{const a=pg[r.p]||(pg[r.p]={u:r.p,i:0,c:0,w:0,n:0,top:r});a.i+=r.i;a.c+=r.c;a.w+=r.pos*r.i;a.n++;if(r.i>a.top.i)a.top=r;(qg[r.q.toLowerCase()]||(qg[r.q.toLowerCase()]=[])).push(r)});
+ rows.forEach(r=>{const a=pg[r.p]||(pg[r.p]={u:r.p,i:0,c:0,w:0,n:0,t:'',top:r});a.i+=r.i;a.c+=r.c;a.w+=r.pos*r.i;a.n++;if(!a.t&&r.t)a.t=r.t;if(r.i>a.top.i)a.top=r;(qg[r.q.toLowerCase()]||(qg[r.q.toLowerCase()]=[])).push(r)});
  rows.forEach(r=>{if(r.i<thr)return;const ctr=r.c/r.i,ex=ectr(r.pos);let t,g;
   if(r.pos<=10&&ctr<.7*ex){t='ctr';g=r.i*(ex-ctr)*.5}
   else if(r.pos>4&&r.pos<=20){t='quick';g=r.i*Math.max(0,ectr(r.pos>10?8:Math.max(1,Math.round(r.pos)-2))-ctr)*.5}
@@ -48,18 +48,12 @@ function analyze(rows){
   big.sort((x,y)=>y.c-x.c||y.i-x.i);const c=L.reduce((s,x)=>s+x.c,0),w=L.reduce((s,x)=>s+x.w,0)/Tt,best=Math.min(...big.map(x=>x.w/x.i));
   can.add(k);out.push({t:'cannibal',q:a[0].q,u:big[0].u,urls:big.map(x=>x.u),pos:w,i:Tt,c,ctr:c/Tt,gain:Tt*Math.max(0,ectr(Math.max(1,best-1))-c/Tt)*.5,ex:ectr(w),rel:5})});
  out.forEach(o=>{if(o.t!='cannibal'&&can.has(o.q.toLowerCase()))o.rel=Math.min(5,o.rel+2)});
+ out.forEach(o=>{const a=pg[o.u];o.ti=(a&&a.t)||'';o.tsrc=o.ti?'file':'url';if(!o.ti)o.ti=slugTitle(o.u);if(!o.n)o.n=a?a.n:1});
  const M={i:1,g:1,c:1};out.forEach(o=>{M.i=Math.max(M.i,o.i);M.g=Math.max(M.g,o.gain);M.c=Math.max(M.c,o.c)});
  out.forEach(o=>{const l=Math.log1p;
   o.score=Math.round(Math.min(100,l(o.i)/l(M.i)*25+l(o.gain)/l(M.g)*30+posS(o.pos)+(o.pos<=20?Math.max(0,Math.min(1,(o.ex-o.ctr)/o.ex))*15:0)+l(o.c)/l(M.c)*5+o.rel));
   o.pr=o.score>=60?'high':o.score>=35?'med':'low';
-  const s=`المركز ${D1(o.pos)}`;
-  o.why={ctr:`الكلمة في ${s} وتحصل على ${N(o.i)} ظهور، لكن CTR الحالي ${P(o.ctr)} أقل من المعدل التقريبي المتوقع لهذا المركز (~${P(o.ex)}).`,
-   quick:`الكلمة في ${s} مع ${N(o.i)} ظهور؛ قريبة من الصفحة الأولى أو من أعلاها، وتحسين موجّه قد يحسّن الظهور الفعلي.`,
-   content:`${N(o.i)} ظهور لكن في ${s} (بعد الصفحة الثانية)؛ غالبًا لا تغطي الصفحة النية بشكل كافٍ.`,
-   link:`الصفحة تظهر لـ ${o.n} استعلامات بمتوسط ${s} ومجموع ${N(o.i)} ظهور؛ الدعم الداخلي قد يساعدها.`,
-   cannibal:`الاستعلام تظهر له ${(o.urls||[]).length} صفحات من موقعك بمتوسط ${s}، فتتوزع الإشارات بينها.`,
-   low:`الصفحة حصلت على ${N(o.i)} ظهور و${N(o.c)} نقرة فقط بمتوسط ${s}.`}[o.t];
-  o.act=PA[o.t]+(o.t=='link'?` (نص الرابط المقترح: «${o.q}»)`:'')});
+  enrich(o)});
  out.sort((a,b)=>b.score-a.score);
  const qs=new Set(rows.map(r=>r.q.toLowerCase())),pgs=new Set(rows.map(r=>r.p).filter(Boolean)),ci=rows.reduce((s,r)=>s+r.i,0),cc=rows.reduce((s,r)=>s+r.c,0);
  TOT={k:qs.size,p:pgs.size,c:cc,i:ci,ctr:cc/ci,pos:rows.reduce((s,r)=>s+r.pos*r.i,0)/ci,n:out.length,h:out.filter(o=>o.pr=='high').length,thr};
@@ -72,18 +66,60 @@ function kpis(){const k=[['إجمالي الكلمات',N(TOT.k),'عدد الا�
 function apply(){const f={t:$('#fT').value,p:$('#fP').value,a:+$('#fA').value||0,b:+$('#fB').value||999,m:+$('#fM').value||0,u:$('#fU').value.toLowerCase(),q:$('#fQ').value.toLowerCase()},k=$('#fS').value;
  VIEW=ITEMS.filter(o=>(!f.t||o.t==f.t)&&(!f.p||o.pr==f.p)&&o.pos>=f.a&&o.pos<=f.b&&o.i>=f.m&&(!f.u||(o.u||'').toLowerCase().includes(f.u))&&(!f.q||o.q.toLowerCase().includes(f.q)));
  VIEW.sort((x,y)=>y[k=='score'?'score':k]-x[k=='score'?'score':k]);pageNo=1;render()}
+const INT={'معلوماتي':'المستخدم يبحث عن شرح أو إجابة؛ يفضّل أن تظهر الإجابة المباشرة في أول الصفحة ثم التفاصيل.','تجاري / شرائي':'المستخدم قريب من قرار الشراء أو التحميل؛ يهمه السعر والمواصفات والثقة وخطوة الإجراء التالية.','مقارنة / اكتشاف':'المستخدم يقارن الخيارات؛ يحتاج معايير واضحة وفروقًا ملموسة وترشيحًا حسب الحالة.','عام':'النية غير واضحة من الصياغة؛ راجع نتائج البحث الفعلية لتحديد نوع الصفحة المتوقع.'};
+function intent(q){q=q.toLowerCase();if(/كيف|ما هو|ما هي|ماهو|ماهي|طريقة|شرح|لماذا|ليه|دليل|تعلم|اتعلم|how|what|why|guide|tutorial/.test(q))return'معلوماتي';if(/سعر|اسعار|أسعار|شراء|اشتري|تحميل|عروض|خصم|كوبون|price|buy|cheap|discount|download/.test(q))return'تجاري / شرائي';if(/افضل|أفضل|مقارنة|مراجعة|ضد|\bvs\b|best|top|review|compare/.test(q))return'مقارنة / اكتشاف';return'عام'}
+function slugTitle(u){let p=String(u||'').replace(/^https?:\/\/[^\/]+/,'').split(/[?#]/)[0].split('/').filter(Boolean).pop();if(!p)return'الصفحة الرئيسية';try{p=decodeURIComponent(p)}catch(e){}return p.replace(/\.\w{2,5}$/,'').replace(/[-_+]+/g,' ').trim()||'الصفحة الرئيسية'}
+function sugg(o){const q=o.q.trim();if(!q||q==='(غير محدد)')return null;const y=new Date().getFullYear(),I=o.it;
+ const t={'معلوماتي':[`${q}: دليل شامل خطوة بخطوة (${y})`,`${q}؟ الشرح الكامل مع أمثلة عملية`,`كل ما تحتاج معرفته عن ${q}`],
+ 'تجاري / شرائي':[`${q} | السعر والمواصفات (${y})`,`${q}: ما يجب معرفته قبل القرار`,`${q} — دليل الشراء والمقارنة`],
+ 'مقارنة / اكتشاف':[`${q} (${y}): مقارنة وترشيحات`,`${q}: المزايا والعيوب والسعر`,`${q} — كيف تختار الأنسب لك`],
+ 'عام':[`${q}: كل ما تحتاج معرفته (${y})`,`${q} | دليل عملي مختصر`,`${q} — معلومات وأسئلة شائعة`]}[I];
+ const m={'معلوماتي':`${q}: شرح مبسّط يوضّح الفكرة والخطوات الأساسية والأخطاء الشائعة مع أمثلة عملية. اقرأ الدليل وطبّق ما يناسبك.`,'تجاري / شرائي':`تعرّف على ${q}: السعر والمواصفات وأهم النقاط قبل اتخاذ القرار. راجع التفاصيل واختر الأنسب لاحتياجك.`,'مقارنة / اكتشاف':`قارن بين الخيارات المتاحة لـ ${q} من حيث المزايا والعيوب والسعر، واعرف أيها يناسب حالتك.`,'عام':`كل ما يخص ${q} في صفحة واحدة: معلومات واضحة وأمثلة وإجابات عن الأسئلة الشائعة.`}[I];
+ return{t,m}}
+function diag(t,q){const r=[],l=[...t].length;r.push(l>60?[`طويل (${l} حرفًا) وقد يُقتطع في النتائج`,1]:l<25?[`قصير (${l} حرفًا) ولا يستغل المساحة`,1]:[`الطول مناسب (${l} حرفًا)`,0]);
+ const w=q.toLowerCase().split(/\s+/).filter(x=>x.length>2),h=w.filter(x=>t.toLowerCase().includes(x)).length;
+ if(w.length)r.push(h/w.length<.6?['لا يتضمن معظم كلمات الاستعلام',1]:['يتضمن كلمات الاستعلام',0]);return r}
+function steps(o){const q=o.q,s=D1(o.pos),I=o.it;return{
+ ctr:[`افتح نتيجة البحث الفعلية للاستعلام «${q}» وقارن عنوانك ووصفك بأعلى 3 نتائج: ما الذي يَعِد به كل منهم وما الذي ينقصك؟`,`اجعل العنوان يبدأ بالاستعلام أو معناه القريب وبطول ~55–60 حرفًا (راجع العناوين المقترحة).`,`أعد كتابة الوصف (~140–155 حرفًا): فائدة واضحة + دعوة لإجراء، بشرط أن يطابق محتوى الصفحة فعلًا.`,`غيّر عنصرًا واحدًا في كل مرة (العنوان أو الوصف) لتعرف سبب أي تغيّر.`,`سجّل الوضع الحالي قبل التعديل (CTR ${P(o.ctr)} ونقرات ${N(o.c)}) وتاريخ التعديل.`,`قارن بعد 3–4 أسابيع على فترة زمنية مماثلة؛ إن لم يتحسن CTR جرّب صياغة أخرى.`],
+ quick:[`تأكد أن الصفحة المستهدفة هي الأنسب لهذا الاستعلام (النية: ${I}).`,`قارن محتواك بالنتائج الأعلى: ما الأقسام والأسئلة التي يغطونها وتنقصك؟`,`أضف أو وسّع الأقسام الناقصة، وضع إجابة مباشرة في أول الصفحة.`,`حدّث H1 والعنوان ليتوافقا مع الاستعلام (المركز الحالي ${s}).`,`أضف 3–5 روابط داخلية من صفحات ذات صلة بنص رابط وصفي مثل «${q}».`,`حدّث المعلومات القديمة (تواريخ/أرقام/صور) ثم اطلب إعادة الفهرسة من Search Console.`,`راقب المركز والنقرات بعد 4–6 أسابيع قبل أي استنتاج.`],
+ content:[`افحص نتائج الصفحة الأولى للاستعلام «${q}» وحدد نوع المحتوى الغالب (دليل، قائمة، منتج، مقارنة…).`,`قرر: هل صفحتك الحالية من النوع الصحيح؟ إن لم تكن، فالأفضل صفحة مخصصة للاستعلام.`,`ابنِ مخططًا يغطي الأسئلة الفرعية التي تظهر في النتائج والأسئلة ذات الصلة.`,`أضف قيمة فريدة (أمثلة، بيانات، صور أصلية، خبرة مباشرة) بدل إعادة صياغة ما هو موجود.`,`اربط الصفحة داخليًا من 3 صفحات قوية على الأقل.`,`اطلب الفهرسة وراقب 6–8 أسابيع؛ هذا النوع أبطأ نتيجةً وأعلى جهدًا.`],
+ link:[`اختر 5–10 صفحات قوية وذات صلة بموضوع الصفحة المستهدفة.`,`أضف رابطًا من كل صفحة بنص وصفي مثل «${q}» مع تنويع الصياغة وعدم التكرار الحرفي المفرط.`,`ضع الروابط داخل سياق المحتوى لا في الفوتر فقط.`,`تأكد أن الصفحة ليست «يتيمة» وأن عمق النقر من الرئيسية قليل.`,`راجع عنوان الصفحة ومحتواها ليخدم الاستعلامات الأخرى التي تظهر لها (${o.n} استعلامات).`,`قِس التغير بعد 4–6 أسابيع.`],
+ cannibal:[`الصفحة الرئيسية المقترحة للاستعلام: ${o.u} (الأعلى نقرات/ظهورًا).`,`افتح كل صفحة متنافسة (${(o.urls||[]).slice(1).join(' ، ')||'—'}) وحدد: هل تخدم نية مختلفة فعلًا؟`,`إن كانت متشابهة: ادمج المحتوى النافع في الصفحة الرئيسية ثم حوّل الأخرى بـ 301.`,`إن كانت مختلفة: فرّق العناوين وH1 والمحتوى ليستهدف كل صفحة نية واضحة.`,`حدّث الروابط الداخلية لتشير إلى الصفحة الرئيسية بنص «${q}».`,`راقب 4–8 أسابيع عبر تقرير الأداء بفلتر الاستعلام وعرض الصفحات.`],
+ low:[`تحقق من أن الصفحة مفهرسة وليست مكررة أو ضعيفة المحتوى.`,`افحص إن كانت لها قيمة أخرى (روابط خارجية، تحويلات، زيارات من قنوات أخرى).`,`إن كان موضوعها مهمًا: حدّث المحتوى وحسّن العنوان وأضف روابط داخلية.`,`إن كانت قديمة أو مكررة: ادمجها في صفحة أقوى مع 301.`,`إن لم تكن لها قيمة: فكّر في noindex أو الحذف مع تحويل مناسب بعد المراجعة.`,`لا تتخذ قرار الحذف من فترة بيانات قصيرة؛ استخدم 3 أشهر على الأقل.`]}[o.t]}
+function enrich(o){const s=`المركز ${D1(o.pos)}`,exC=o.i*o.ex,gap=Math.max(0,exC-o.c);o.it=intent(o.q);
+ o.eff={ctr:'منخفض',quick:'متوسط',content:'عالٍ',link:'منخفض',cannibal:'متوسط',low:'متوسط'}[o.t];
+ o.why={ctr:`الكلمة في ${s} وتحصل على ${N(o.i)} ظهور، لكن CTR الحالي ${P(o.ctr)} أقل من المعدل التقريبي المتوقع (~${P(o.ex)}).`,quick:`الكلمة في ${s} مع ${N(o.i)} ظهور؛ قريبة من الصفحة الأولى أو من أعلاها، وتحسين موجّه قد يحسّن الظهور الفعلي.`,content:`${N(o.i)} ظهور لكن في ${s} (بعد الصفحة الثانية)؛ غالبًا لا تغطي الصفحة النية بشكل كافٍ.`,link:`الصفحة تظهر لـ ${o.n} استعلامات بمتوسط ${s} ومجموع ${N(o.i)} ظهور؛ الدعم الداخلي قد يساعدها.`,cannibal:`الاستعلام تظهر له ${(o.urls||[]).length} صفحات من موقعك بمتوسط ${s}، فتتوزع الإشارات بينها.`,low:`الصفحة حصلت على ${N(o.i)} ظهور و${N(o.c)} نقرة فقط بمتوسط ${s}.`}[o.t];
+ o.det=[o.why,`الأرقام: ${N(o.i)} ظهور، ${N(o.c)} نقرة، CTR ${P(o.ctr)} عند ${s}.`];
+ if(o.pos<=20)o.det.push(`المقارنة: المعدل التقريبي لهذا المركز ~${P(o.ex)} أي نحو ${N(exC)} نقرة متوقعة مقابل ${N(o.c)} فعلية${gap>0?` (فجوة ≈ ${N(gap)} نقرة)`:' (لا فجوة واضحة)'}. مرجع تقريبي وليس رقمًا رسميًا؛ يختلف حسب شكل النتيجة وميزات البحث.`);
+ o.det.push(`نية البحث المرجّحة: ${o.it}. ${INT[o.it]}`,`المكسب المحتمل: ~${N(o.gain)} نقرة خلال فترة البيانات في سيناريو متحفظ. تقدير نظري وليس وعدًا.`,o.i<200?'مستوى الثقة: منخفض نسبيًا (حجم الظهور صغير)؛ اختبر بحذر وتحقق على فترة أطول.':'مستوى الثقة: جيد، حجم الظهور كافٍ لاستنتاج أولي.',`الجهد المتوقع: ${o.eff}.`);
+ o.st=steps(o);o.act=o.st.join(' | ')}
+function copy(t){try{navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}}
 function render(){const pgs=Math.max(1,Math.ceil(VIEW.length/SZ));pageNo=Math.min(pageNo,pgs);
  $('#cnt').textContent=`${N(VIEW.length)} فرصة مطابقة من أصل ${N(ITEMS.length)}`;$('#pg').textContent=`${pageNo} / ${pgs}`;$('#prev').disabled=pageNo<=1;$('#next').disabled=pageNo>=pgs;
  const s=VIEW.slice((pageNo-1)*SZ,pageNo*SZ);
- $('#list').innerHTML=s.length?s.map(o=>`<article class="item" style="--c:${T[o.t][1]}"><div class="ih"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div>
- <div class="badges"><span class="b" style="--c:${T[o.t][1]}">${T[o.t][0]}</span><span class="b pr-${o.pr}">أولوية ${PR[o.pr]}</span><span class="sc" data-tip="درجة فرصة السيو (0–100): مقياس تقديري خاص بهذا التطبيق وليس مقياسًا رسميًا من Google." tabindex="0">${o.score}</span></div></div>
+ $('#list').innerHTML=s.length?s.map(o=>{const own=TITLES[o.u],known=own||o.tsrc=='file',ttl=own||o.ti,sg=sugg(o),row=x=>`<div class="sr"><span>${esc(x)}</span><small>${[...x].length} حرف</small><button class="btn" data-copy="${esc(x)}">نسخ</button></div>`;
+ return `<article class="item" style="--c:${T[o.t][1]}"><div class="ih"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div>
+ <div class="badges"><span class="b" style="--c:${T[o.t][1]}">${T[o.t][0]}</span><span class="b pr-${o.pr}">أولوية ${PR[o.pr]}</span><span class="b" style="--c:#475569">نية: ${o.it}</span><span class="b" style="--c:#475569">جهد: ${o.eff}</span><span class="sc" data-tip="درجة فرصة السيو (0–100): مقياس تقديري خاص بهذا التطبيق وليس مقياسًا رسميًا من Google." tabindex="0">${o.score}</span></div></div>
  <div class="m"><div><span>المركز الحالي</span>${D1(o.pos)}</div><div><span>مرات الظهور</span>${N(o.i)}</div><div><span>CTR</span>${P(o.ctr)}</div><div><span>النقرات</span>${N(o.c)}</div><div><span>مكسب نظري محتمل</span>~${N(o.gain)} نقرة</div></div>
- <p class="why"><b>لماذا فرصة؟</b> ${o.why}</p><p class="act"><b>الإجراء المقترح:</b> ${esc(o.act)}</p>${o.urls&&o.urls.length>1?`<div class="u">الصفحات المتنافسة: ${o.urls.map(esc).join(' | ')}</div>`:''}</article>`).join(''):'<div class="note">لا توجد فرص مطابقة للفلاتر الحالية. جرّب توسيع المعايير.</div>'}
+ <div class="tb"><div class="tl">عنوان الصفحة الحالي <em>(${own?'أدخلته أنت':o.tsrc=='file'?'من الملف':'مستنتج من الرابط — غير مؤكد'})</em></div><div class="tt">${esc(ttl)}</div>
+ <div class="chips">${known?diag(ttl,o.q).map(c=>`<span class="ch ${c[1]?'w':'g'}">${c[1]?'⚠':'✓'} ${c[0]}</span>`).join(''):'<span class="ch">ملفات Search Console لا تتضمن عناوين الصفحات، فهذا الاسم مستنتج من الرابط. أدخل العنوان الفعلي لتشخيصه:</span>'}</div>
+ <input class="ti" data-u="${esc(o.u)}" placeholder="الصق عنوان الصفحة الفعلي (title) هنا ثم اضغط Enter" value="${esc(own||'')}"></div>
+ ${sg?`<div class="sg"><div class="tl">عناوين مقترحة للاختبار</div>${sg.t.map(row).join('')}<div class="tl">وصف (Meta description) مقترح</div>${row(sg.m)}<div class="priv">قوالب مبنية على الاستعلام ونيته: عدّلها لتطابق محتوى الصفحة فعلًا، وأضف السنة فقط إذا كان المحتوى محدّثًا فعلًا.</div></div>`:''}
+ <div class="tl">لماذا هذه فرصة؟</div><ul class="dl">${o.det.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+ <div class="tl">الإجراء المقترح — خطوات تفصيلية</div><ol class="dl act">${o.st.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>${o.urls&&o.urls.length>1?`<div class="u">الصفحات المتنافسة: ${o.urls.map(esc).join(' | ')}</div>`:''}</article>`}).join(''):'<div class="note">لا توجد فرص مطابقة للفلاتر الحالية. جرّب توسيع المعايير.</div>'}
+$('#list').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(b){copy(b.dataset.copy);b.textContent='تم ✓';setTimeout(()=>b.textContent='نسخ',1200)}});
+$('#list').addEventListener('change',e=>{if(e.target.classList.contains('ti')){const v=e.target.value.trim();if(v)TITLES[e.target.dataset.u]=v;else delete TITLES[e.target.dataset.u];render()}});
+function overview(){const B=[['1–3',0,3],['4–10',3,10],['11–20',10,20],['21–50',20,50],['+50',50,1e9]].map(([l,a,b])=>{const r=ROWS.filter(x=>x.pos>a&&x.pos<=b||(a==0&&x.pos<=b));return{l,i:r.reduce((s,x)=>s+x.i,0),c:r.reduce((s,x)=>s+x.c,0)}}),mx=Math.max(1,...B.map(x=>x.i));
+ const bar=(l,v,m,t,c)=>`<div class="br"><span>${l}</span><i><b style="width:${Math.max(2,v/m*100)}%;background:${c}"></b></i><em>${t}</em></div>`;
+ const g={};ITEMS.forEach(o=>g[o.t]=(g[o.t]||0)+o.gain);const gm=Math.max(1,...Object.values(g)),mid=B[1].i+B[2].i;
+ $('#pOv').innerHTML=`<div class="kpi" style="margin-bottom:12px"><span>منطقة الفرص (المراكز 4–20)</span><strong>${P(mid/TOT.i)} من إجمالي الظهور</strong><span>هذه المراكز عادةً أكثر قابلية للتحسين من التركيز على الصفحات الأولى فقط.</span></div>
+ <div class="ov"><div class="kpi"><h2>الظهور والنقرات حسب المركز</h2>${B.map(x=>bar(x.l,x.i,mx,`${N(x.i)} ظهور · ${N(x.c)} نقرة`,'var(--acc)')).join('')}</div>
+ <div class="kpi"><h2>المكسب النظري حسب نوع الفرصة</h2>${Object.keys(g).sort((a,b)=>g[b]-g[a]).map(k=>bar(T[k][0],g[k],gm,`~${N(g[k])} نقرة`,T[k][1])).join('')||'لا توجد فرص'}<span class="priv">تقديرات نظرية متحفظة وليست وعدًا.</span></div></div>`}
 function plan(){const g={};ITEMS.forEach(o=>{const x=g[o.t]||(g[o.t]={t:o.t,n:0,gain:0,sc:0,ex:[]});x.n++;x.gain+=o.gain;x.sc+=o.score;if(x.ex.length<3)x.ex.push(o.q)});
  const L=Object.values(g).sort((a,b)=>(b.sc/b.n*Math.log1p(b.gain))-(a.sc/a.n*Math.log1p(a.gain)));
  $('#pPlan').innerHTML=L.length?L.map((x,i)=>`<div class="plan" style="--c:${T[x.t][1]}"><div class="n">${i+1}</div><dl><dt>ما الذي نصلحه أولًا</dt><dd><b>${T[x.t][0]}</b> — ${N(x.n)} عنصر، مثل: ${x.ex.map(e=>'«'+esc(e)+'»').join('، ')}</dd>
  <dt>لماذا</dt><dd>${PW[x.t]}</dd><dt>الفرصة المتوقعة</dt><dd>حتى ~${N(x.gain)} نقرة إضافية خلال فترة البيانات (تقدير نظري متحفظ، غير مضمون)</dd><dt>الإجراء الموصى به</dt><dd>${PA[x.t]}</dd></dl></div>`).join(''):'<div class="note">لم تُكتشف فرص كافية في هذه البيانات.</div>'}
-function show(rows,name){ITEMS=analyze(rows);fname=name;kpis();plan();
+function show(rows,name){ITEMS=analyze(rows);fname=name;TITLES={};ROWS=rows;kpis();plan();overview();
  $('#fT').innerHTML='<option value="">الكل</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
  $('#meta').textContent=`${name} — ${N(rows.length)} صف تم تحليله`;$('#hero').hidden=true;$('#app').hidden=false;apply();window.scrollTo(0,0)}
 
@@ -115,8 +151,8 @@ $('#demo').onclick=async()=>{busy(true);await tick();try{demo()}finally{busy(fal
 $('#reset').onclick=()=>{$('#app').hidden=true;$('#hero').hidden=false};
 $('#prev').onclick=()=>{pageNo--;render();window.scrollTo(0,200)};$('#next').onclick=()=>{pageNo++;render();window.scrollTo(0,200)};
 let dt;['fT','fP','fS'].forEach(i=>$('#'+i).onchange=apply);['fA','fB','fM','fU','fQ'].forEach(i=>$('#'+i).oninput=()=>{clearTimeout(dt);dt=setTimeout(apply,250)});
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x==b));$('#pTop').hidden=b.dataset.t!='top';$('#pPlan').hidden=b.dataset.t!='plan'});
-$('#exp').onclick=()=>{const h=['الاستعلام','الرابط','المركز','مرات الظهور','CTR','النقرات','درجة الفرصة','نوع الفرصة','الأولوية','السبب','الإجراء المقترح','مكسب نظري محتمل (نقرات)'];
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x==b));[['top','pTop'],['plan','pPlan'],['ov','pOv']].forEach(([k,id])=>$('#'+id).hidden=b.dataset.t!=k)});
+$('#exp').onclick=()=>{const h=['الاستعلام','الرابط','عنوان الصفحة الحالي','مصدر العنوان','عنوان مقترح 1','عنوان مقترح 2','عنوان مقترح 3','وصف مقترح','المركز','مرات الظهور','CTR','النقرات','درجة الفرصة','نوع الفرصة','الأولوية','نية البحث','الجهد','لماذا فرصة','خطوات الإجراء','مكسب نظري محتمل (نقرات)'];
  const q=v=>'"'+String(v).replace(/"/g,'""').replace(/^([=+\-@])/,"'$1")+'"';
- const rows=VIEW.map(o=>[o.q,o.u,D1(o.pos),Math.round(o.i),P(o.ctr),Math.round(o.c),o.score,T[o.t][0],PR[o.pr],o.why,o.act,Math.round(o.gain)].map(q).join(','));
+ const rows=VIEW.map(o=>{const sg=sugg(o)||{t:['','',''],m:''},own=TITLES[o.u];return[o.q,o.u,own||o.ti,own?'أدخله المستخدم':o.tsrc=='file'?'الملف':'مستنتج من الرابط',...sg.t,sg.m,D1(o.pos),Math.round(o.i),P(o.ctr),Math.round(o.c),o.score,T[o.t][0],PR[o.pr],o.it,o.eff,o.det.join(' | '),o.st.map((x,i)=>(i+1)+'. '+x).join(' | '),Math.round(o.gain)].map(q).join(',')});
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.map(q).join(',')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='seo-opportunities.csv';a.click();URL.revokeObjectURL(a.href)};
