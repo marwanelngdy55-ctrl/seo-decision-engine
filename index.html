@@ -38,6 +38,7 @@ main{max-width:980px;margin:0 auto;padding:20px 14px 60px}
 details{font-size:13.5px;margin:6px 0}summary{cursor:pointer;color:var(--mut)}
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);max-width:460px;width:92%}
 dialog label{display:block;margin:10px 0 2px;font-size:13px;color:var(--mut)}dialog input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg);direction:ltr}
+h3{margin:22px 0 8px;font-size:17px}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sm{display:block;color:var(--mut);font-size:13px;white-space:normal}.act{font-size:14px;margin:6px 0}
 [hidden]{display:none!important}
 @media(max-width:700px){.kp{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -48,7 +49,7 @@ dialog label{display:block;margin:10px 0 2px;font-size:13px;color:var(--mut)}dia
 <section id="hero">
  <div class="drop" id="drop" tabindex="0" role="button"><b>اسحب ملف Search Console هنا أو اضغط للاختيار</b><small>xlsx / csv — يُعالج داخل متصفحك فقط</small></div>
  <input type="file" id="file" accept=".csv,.xlsx,.xls,.txt" hidden>
- <button class="btn" id="demo">جرّب بيانات تجريبية</button>
+ <button class="btn" id="demo">جرّب بيانات تجريبية</button> <button class="btn" id="cmpBtn">📊 قارن ملف قديم بجديد</button>
  <div class="err" id="err" hidden></div>
 </section>
 <section id="app" hidden>
@@ -59,6 +60,15 @@ dialog label{display:block;margin:10px 0 2px;font-size:13px;color:var(--mut)}dia
  </div>
  <div id="list"></div><div style="text-align:center"><button class="btn" id="more">عرض المزيد</button></div>
  <p class="mut" style="font-size:12.5px">الدرجة والمكسب تقديران نظريان (ليسا من Google). راجع أي عنوان أو وصف مقترح قبل نشره ليطابق محتوى الصفحة فعلًا.</p>
+</section>
+<section id="cmp" hidden>
+ <div class="bar"><b>مقارنة فترتين</b><button class="btn" id="cBack">رجوع</button></div>
+ <div class="two">
+  <label class="drop" style="margin:0;padding:30px 10px"><b>الملف القديم</b><small id="nO">اضغط للاختيار</small><input type="file" id="fO" accept=".csv,.xlsx,.xls,.txt" hidden></label>
+  <label class="drop" style="margin:0;padding:30px 10px"><b>الملف الجديد</b><small id="nN">اضغط للاختيار</small><input type="file" id="fN" accept=".csv,.xlsx,.xls,.txt" hidden></label>
+ </div>
+ <div class="bar"><button class="btn p" id="cGo" disabled>قارن</button></div>
+ <div class="err" id="cerr" hidden></div><div id="cres"></div>
 </section>
 </main>
 <dialog id="dlg"><form method="dialog">
@@ -139,20 +149,20 @@ async function ai(o,m){const key=LS('key');if(!key)throw new Error('NOKEY');cons
 
 /* ---- العرض ---- */
 const chk=(t,a,b)=>{const l=[...t].length;return`<span class="${l>b||l<a?'w':'g'}">${l>b||l<a?'⚠':'✓'} ${l} حرف</span>`};
-function card(o){const m=META[o.u]||{},r=AIR[o.id],c=T[o.t][1];
+function card(o){const m=META[o.u]||{},r=AIR[o.id],tg=o.tag||T[o.t],c=tg[1];
  const cur=m.title||m.desc?`<div class="cur"><small>العنوان الحالي</small> ${chk(m.title||'',25,60)}<div>${esc(m.title||'—')}</div><small>الوصف الحالي</small> ${chk(m.desc||'',70,160)}<div>${esc(m.desc||'—')}</div></div>`:'';
  const row=x=>`<div class="row"><span>${esc(x)}</span><small>${[...x].length}</small><button class="btn" data-cp="${esc(x)}">نسخ</button></div>`;
  const res=r?(r.err?`<div class="err">${esc(r.err)}</div>`:`<div class="res">${r.gap?`<h4>ما ينقصك مقارنة بالأعلى${r.grounded?'':' (بدون بحث مباشر)'}</h4><div>${esc(r.gap)}</div>`:''}
   ${(r.serp||[]).length?`<details><summary>أعلى النتائج التي فحصها الذكاء الاصطناعي</summary>${r.serp.map(s=>`<div>• <b>${esc(s.t||'')}</b> — ${esc(s.d||'')}</div>`).join('')}</details>`:''}
   <h4>عناوين مقترحة</h4>${(r.titles||[]).map(row).join('')}<h4>وصف مقترح</h4>${(r.descs||[]).map(row).join('')}</div>`):'';
- return`<article class="it" style="--c:${c}"><div class="hd"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div><div><span class="tg">${T[o.t][0]}</span> <span class="sc">${o.score}</span></div></div>
- <div class="mt"><span>المركز <b>${o.pos.toFixed(1)}</b></span><span>ظهور <b>${N(o.i)}</b></span><span>نقرات <b>${N(o.c)}</b></span><span>CTR <b>${P(o.ctr)}</b> (متوقع ${P(o.ex)})</span><span>مكسب محتمل <b>~${N(o.gain)}</b></span></div>
+ return`<article class="it" style="--c:${c}"><div class="hd"><div><div class="q">${esc(o.q)}</div><div class="u">${esc(o.u||'—')}</div></div><div><span class="tg">${tg[0]}</span> <span class="sc">${o.badge??o.score}</span></div></div>
+ <div class="mt">${o.mt||`<span>المركز <b>${o.pos.toFixed(1)}</b></span><span>ظهور <b>${N(o.i)}</b></span><span>نقرات <b>${N(o.c)}</b></span><span>CTR <b>${P(o.ctr)}</b> (متوقع ${P(o.ex)})</span><span>مكسب محتمل <b>~${N(o.gain)}</b></span>`}</div>${o.extra||''}
  ${cur}<button class="btn p" data-ai="${o.id}">${r&&!r.err?'↻ أعد التوليد':'✨ اجلب العنوان واقترح عنوانًا ووصفًا'}</button>${res}</article>`}
 function render(){$('#list').innerHTML=VIEW.slice(0,SHOW).map(card).join('')||'<p class="mut">لا توجد فرص مطابقة.</p>';$('#more').hidden=VIEW.length<=SHOW}
 function apply(){const t=$('#fT').value,q=$('#fQ').value.toLowerCase();VIEW=ITEMS.filter(o=>(!t||o.t==t)&&(!q||o.q.toLowerCase().includes(q)||(o.u||'').toLowerCase().includes(q)));SHOW=20;render()}
-async function run(id,btn){const o=ITEMS[id];if(btn){btn.disabled=true;btn.textContent='جارٍ العمل…'}
+async function run(id,btn){const o=ITEMS[id]||X[id];if(btn){btn.disabled=true;btn.textContent='جارٍ العمل…'}
  try{const m=await getMeta(o.u);AIR[id]=await ai(o,m)}catch(e){if(e.message=='NOKEY'){$('#dlg').showModal();AIR[id]=null;delete AIR[id]}else AIR[id]={err:'تعذّر التوليد: '+e.message}}
- render()}
+ RR()}
 async function prefetch(){for(const o of ITEMS.slice(0,10)){if(!okU(o.u)||META[o.u])continue;await getMeta(o.u);render()}}
 
 /* ---- الإدخال والأحداث ---- */
@@ -160,9 +170,10 @@ function show(rows){ROWS=rows;ITEMS=analyze(rows);META={};AIR={};
  $('#kp').innerHTML=[['كلمات',N(TOT.k)],['ظهور',N(TOT.i)],['متوسط CTR',P(TOT.ctr)],['فرص',N(TOT.n)]].map(x=>`<div>${x[0]}<strong>${x[1]}</strong></div>`).join('');
  $('#fT').innerHTML='<option value="">كل الأنواع</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
  $('#hero').hidden=true;$('#app').hidden=false;apply();prefetch()}
-async function handle(f){if(!f)return;$('#err').hidden=true;try{const x=f.name.split('.').pop().toLowerCase();let s;
+async function readF(f){const x=f.name.split('.').pop().toLowerCase();let s;
  if(x=='xlsx'||x=='xls'){if(typeof XLSX=='undefined')throw new Error('مكتبة Excel لم تُحمَّل (تحتاج إنترنت). جرّب CSV.');const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});s=wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}))}
- else if(x=='csv'||x=='txt')s=[parseCSV(await f.text())];else throw new Error('الصيغة غير مدعومة.');show(toRows(s))}catch(e){$('#err').textContent='⚠️ '+e.message;$('#err').hidden=false}}
+ else if(x=='csv'||x=='txt')s=[parseCSV(await f.text())];else throw new Error('الصيغة غير مدعومة.');return toRows(s)}
+async function handle(f){if(!f)return;$('#err').hidden=true;try{show(await readF(f))}catch(e){$('#err').textContent='⚠️ '+e.message;$('#err').hidden=false}}
 function demo(){const D=[['افضل لابتوب للبرمجة','/blog/best-laptop',7.2,18500,.45],['سعر ايفون 15 في مصر','/prices/iphone-15',5.3,22000,.6],['كيف اتعلم السيو','/guides/seo-basics',12.6,7800,1],['كيف اتعلم السيو','/courses/seo',15.2,3800,1],['افضل سماعات بلوتوث','/blog/best-headphones',3.1,15000,1],['طريقة عمل سيرة ذاتية','/blog/cv-guide',6.5,12800,.5],['برنامج تحرير الفيديو مجانا','/software/free-video-editor',24.6,8700,1],['ما هو الذكاء الاصطناعي','/blog/what-is-ai',9.2,14500,.55],['افضل vpn','/reviews/vpn',8.1,6800,.55]];
  show(D.map(d=>({q:d[0],p:'https://example.com'+d[1],pos:d[2],i:d[3],c:Math.round(d[3]*ectr(d[2])*d[4])})))}
 const drop=$('#drop');drop.onclick=()=>$('#file').click();drop.onkeydown=e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();$('#file').click()}};
@@ -174,7 +185,7 @@ $('#demo').onclick=demo;$('#reset').onclick=()=>{$('#app').hidden=true;$('#hero'
 $('#more').onclick=()=>{SHOW+=20;render()};$('#fT').onchange=apply;$('#fQ').oninput=apply;
 $('#list').onclick=e=>{const b=e.target.closest('[data-cp]'),a=e.target.closest('[data-ai]');
  if(b){navigator.clipboard.writeText(b.dataset.cp).catch(()=>{});b.textContent='تم ✓';setTimeout(()=>b.textContent='نسخ',1200)}
- if(a)run(+a.dataset.ai,a)};
+ if(a)run(a.dataset.ai,a)};
 $('#bulk').onclick=async e=>{if(!LS('key')){$('#dlg').showModal();return}const b=e.target;b.disabled=true;
  for(const o of VIEW.slice(0,10)){if(AIR[o.id]&&!AIR[o.id].err)continue;b.textContent=`جارٍ العمل (${o.id+1})…`;await run(o.id);await new Promise(r=>setTimeout(r,6500))}
  b.disabled=false;b.textContent='✨ حسّن أعلى 10'};
@@ -184,6 +195,41 @@ $('#exp').onclick=()=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""').re
  h=['الاستعلام','الرابط','المركز','ظهور','نقرات','CTR','الدرجة','النوع','العنوان الحالي','الوصف الحالي','عنوان مقترح 1','عنوان مقترح 2','عنوان مقترح 3','وصف مقترح 1','وصف مقترح 2'];
  const rows=VIEW.map(o=>{const m=META[o.u]||{},r=AIR[o.id]||{},t=r.titles||[],d=r.descs||[];return[o.q,o.u,o.pos.toFixed(1),Math.round(o.i),Math.round(o.c),P(o.ctr),o.score,T[o.t][0],m.title,m.desc,t[0],t[1],t[2],d[0],d[1]].map(q).join(',')});
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.map(q).join(',')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));a.download='seo-opportunities.csv';a.click()};
+
+/* ---- مقارنة فترتين ---- */
+const X={};let RR=render,CM=null,FO=null,FN=null;
+const AG=rows=>{const m={};rows.forEach(r=>{const k=r.q+'\n'+r.p,x=m[k]||(m[k]={q:r.q,p:r.p,i:0,c:0,w:0});x.i+=r.i;x.c+=r.c;x.w+=r.pos*r.i});Object.values(m).forEach(x=>{x.pos=x.w/x.i;x.ctr=x.c/x.i});return m};
+const f1=x=>x.toFixed(1);
+const dg=dp=>dp>=1?'المركز تراجع: قارن المحتوى بالأعلى منك وحدّثه وقوّي الروابط الداخلية، وراجع أي تعديل حديث على الصفحة.':'المركز ثابت تقريبًا لكن CTR نازل: عدّل العنوان والوصف (جرّب الزرار تحت).';
+const gd=(y,dp)=>dp<=-.5?(y.pos>3&&y.pos<=10?'قريب من القمة: ادفعه بروابط داخلية وتحديث بسيط للمحتوى.':'كمّل بنفس الأسلوب وحدّث المحتوى دوريًا.'):'التحسن جاي من CTR: صياغة العنوان والوصف شغالة، كررها في صفحات مشابهة.';
+const kc=(l,a,b,fm,lb)=>{const d=b-a,z=Math.abs(d)<1e-9,good=lb?d<0:d>0;return`<div>${l}<strong>${fm(b)}</strong><span class="${z?'':good?'g':'w'}">${z?'=':d>0?'▲':'▼'} كان ${fm(a)}</span></div>`};
+const rw=(y,t)=>`<div class="row"><span><b>${esc(y.q)}</b><small style="display:block;direction:ltr;text-align:right;white-space:normal">${esc(y.p)}</small><div class="sm">${t}</div></span></div>`;
+function drawCmp(){if(!CM)return;$('#cres').innerHTML=CM.head+'<h3>🔴 اهتم بيها الأول</h3>'+(CM.att.map(card).join('')||'<p class="mut">لا يوجد تراجع واضح 👌</p>')+CM.tail}
+async function doCmp(){const b=$('#cGo'),er=$('#cerr');er.hidden=true;b.disabled=true;b.textContent='جارٍ المقارنة…';
+ try{const A=AG(await readF(FO)),B=AG(await readF(FN)),sm=m=>{const v=Object.values(m),i=v.reduce((s,x)=>s+x.i,0),c=v.reduce((s,x)=>s+x.c,0),w=v.reduce((s,x)=>s+x.w,0);return{i,c,ctr:c/i,pos:w/i}},
+ sa=sm(A),sb=sm(B),md=Object.values(B).map(x=>x.i).sort((p,q)=>p-q),thr=Math.max(20,md[md.length>>1]||0),att=[],up=[],lost=[],nw=[];
+ for(const k in B){const y=B[k],x=A[k];if(!x){if(y.i>=thr)nw.push(y);continue}if(Math.max(x.i,y.i)<thr)continue;
+  const d=y.i*(y.ctr-x.ctr),dp=y.pos-x.pos,o={x,y,d,dp};
+  if(d<=-3||(dp>=2&&y.i>=thr))att.push(o);else if(d>=3||(dp<=-2&&y.i>=thr))up.push(o)}
+ for(const k in A)if(!B[k]&&A[k].i>=thr)lost.push(A[k]);
+ att.sort((p,q)=>p.d-q.d);up.sort((p,q)=>q.d-p.d);lost.sort((p,q)=>q.c-p.c);nw.sort((p,q)=>q.i-p.i);
+ const cards=att.slice(0,10).map((o,n)=>{const{x,y,d,dp}=o,id='c'+n,c={id,t:'ctr',tag:['تراجع','#dc2626'],badge:(d<0?'−':'+')+N(Math.abs(d))+' نقرة',q:y.q,u:y.p,pos:y.pos,i:y.i,c:y.c,ctr:y.ctr,ex:ectr(y.pos),gain:0,
+  mt:`<span>المركز <b>${f1(x.pos)} ← ${f1(y.pos)}</b></span><span>ظهور <b>${N(x.i)} ← ${N(y.i)}</b></span><span>نقرات <b>${N(x.c)} ← ${N(y.c)}</b></span><span>CTR <b>${P(x.ctr)} ← ${P(y.ctr)}</b></span>`,extra:`<div class="act w">${dg(dp)}</div>`};X[id]=c;return c});
+ const dctr=(sb.ctr-sa.ctr)/(sa.ctr||1),dpo=sb.pos-sa.pos,vd=dpo<=-.3||dctr>=.1?['g','✅ الوضع العام بيتحسن']:dpo>=.3||dctr<=-.1?['w','🔴 الوضع العام بيتراجع']:['','➖ الوضع العام مستقر تقريبًا'],ci=att.filter(o=>o.dp<1).length;
+ const head=`<div class="kp">${kc('نقرات',sa.c,sb.c,N)}${kc('ظهور',sa.i,sb.i,N)}${kc('متوسط CTR',sa.ctr,sb.ctr,P)}${kc('متوسط المركز',sa.pos,sb.pos,f1,1)}</div>
+<div class="cur"><b class="${vd[0]}">${vd[1]}</b>${Math.abs(sb.i/sa.i-1)>.3?'<div class="sm">عدد الظهور مختلف بين الفترتين، فاعتمد على CTR والمركز أكتر من إجمالي النقرات.</div>':''}<div><b>اهتم بإيه:</b></div>
+${att.length?`<div>🔴 ${att.length} تراجع — ابدأ بالأعلى خسارة.</div>`:''}${ci?`<div>✏️ ${ci} منهم المركز ثابت وCTR نازل: أسرع إصلاح بتعديل العنوان والوصف.</div>`:''}${lost.length?`<div>🕳 ${lost.length} اختفت من النتائج.</div>`:''}${up.length?`<div>🟢 ${up.length} بيتحسن — حافظ عليه.</div>`:''}</div>`;
+ const tail=`<h3>🟢 اللي بيتحسن</h3>${up.slice(0,10).map(o=>rw(o.y,`المركز ${f1(o.x.pos)} ← ${f1(o.y.pos)} · CTR ${P(o.x.ctr)} ← ${P(o.y.ctr)}<br>${gd(o.y,o.dp)}`)).join('')||'<p class="mut">لا يوجد تحسن واضح.</p>'}
+ ${lost.length?`<h3>🕳 اختفت من النتائج</h3>${lost.slice(0,5).map(x=>rw(x,`كانت: المركز ${f1(x.pos)} · ${N(x.c)} نقرة. افحص هل الصفحة اتحذفت أو اتغيّر رابطها أو خرجت من الفهرسة.`)).join('')}`:''}
+ ${nw.length?`<h3>✨ ظهرت حديثًا</h3>${nw.slice(0,5).map(y=>rw(y,`المركز ${f1(y.pos)} · ${N(y.i)} ظهور`)).join('')}`:''}`;
+ CM={head,att:cards,tail};drawCmp()}catch(e){er.textContent='⚠️ '+e.message;er.hidden=false}
+ b.disabled=false;b.textContent='قارن'}
+const ck=()=>{$('#cGo').disabled=!(FO&&FN)};
+$('#cmpBtn').onclick=()=>{$('#hero').hidden=true;$('#cmp').hidden=false;RR=drawCmp};
+$('#cBack').onclick=()=>{$('#cmp').hidden=true;$('#hero').hidden=false;RR=render};
+$('#fO').onchange=e=>{FO=e.target.files[0];$('#nO').textContent=FO?FO.name:'اضغط للاختيار';ck()};
+$('#fN').onchange=e=>{FN=e.target.files[0];$('#nN').textContent=FN?FN.name:'اضغط للاختيار';ck()};
+$('#cGo').onclick=doCmp;$('#cres').onclick=$('#list').onclick;
 </script>
 </body>
 </html>
