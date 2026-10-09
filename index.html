@@ -161,7 +161,7 @@ function card(o){const m=META[o.u]||{},r=AIR[o.id],tg=o.tag||T[o.t],c=tg[1];
 function render(){$('#list').innerHTML=VIEW.slice(0,SHOW).map(card).join('')||'<p class="mut">لا توجد فرص مطابقة.</p>';$('#more').hidden=VIEW.length<=SHOW}
 function apply(){const t=$('#fT').value,q=$('#fQ').value.toLowerCase();VIEW=ITEMS.filter(o=>(!t||o.t==t)&&(!q||o.q.toLowerCase().includes(q)||(o.u||'').toLowerCase().includes(q)));SHOW=20;render()}
 async function run(id,btn){const o=ITEMS[id]||X[id];if(btn){btn.disabled=true;btn.textContent='جارٍ العمل…'}
- try{const m=await getMeta(o.u);AIR[id]=await ai(o,m)}catch(e){if(e.message=='NOKEY'){$('#dlg').showModal();AIR[id]=null;delete AIR[id]}else AIR[id]={err:'تعذّر التوليد: '+e.message}}
+ try{const m=await getMeta(o.u);AIR[id]=await ai(o,m)}catch(e){if(e.message=='NOKEY'){$('#dlg').showModal();AIR[id]=null;delete AIR[id]}else AIR[id]={err:/failed to fetch|networkerror|load failed/i.test(e.message)?'تعذّر الاتصال بخادم Google من متصفحك (الشبكة أو VPN أو إضافة حجب إعلانات). جرّب المقترحات اللي في الدعم، أو افتح Console لمعرفة الطلب المحجوب.':'تعذّر التوليد: '+e.message}}
  RR()}
 async function prefetch(){for(const o of ITEMS.slice(0,10)){if(!okU(o.u)||META[o.u])continue;await getMeta(o.u);render()}}
 
